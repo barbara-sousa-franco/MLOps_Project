@@ -1,0 +1,8 @@
+artifact_location: file:///C:/Users/35191/Mestrado%20MDSAA-DS/MLOps/MLOps_Project/mlruns/587834363239687798
+creation_time: 1778539909163
+experiment_id: '587834363239687798'
+last_update_time: 1778539909163
+lifecycle_stage: active
+name: kedro_temp_mlops
+trace_location: null
+workspace: default
