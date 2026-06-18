@@ -1,0 +1,84 @@
+# Parâmetros GLOBAIS — lidos por TODOS os nós, nunca inline (convenção do blueprint).
+# Parâmetros específicos de cada pipeline vivem nos parameters_*.yml.
+
+# TODO parameters.yml:
+seed: 42                     # random_state lido por todos os nós
+target_col: "Price"
+use_log_target: true         # testar log1p — EDA mostra skew forte; documentar em ASSUMPTIONS.md
+
+# Lista de colunas esperadas no raw (validada na ingestion/data_unit_tests)
+raw_columns:
+  - Price
+  - District
+  - City
+  - Town
+  - Type
+  - EnergyCertificate
+  - GrossArea
+  - TotalArea
+  - Parking
+  - HasParking
+  - Floor
+  - ConstructionYear
+  - EnergyEfficiencyLevel
+  - PublishDate
+  - Garage
+  - Elevator
+  - ElectricCarsCharging
+  - TotalRooms
+  - NumberOfBedrooms
+  - NumberOfWC
+  - ConservationStatus
+  - LivingArea
+  - LotSize
+  - BuiltArea
+  - NumberOfBathrooms
+
+# TODO: rever a partilha numérica/categórica com base no EDA
+numeric_features:
+  - GrossArea
+  - TotalArea
+  - LivingArea
+  - LotSize
+  - BuiltArea
+  - ConstructionYear
+  - TotalRooms
+  - NumberOfBedrooms
+  - NumberOfWC
+  - NumberOfBathrooms
+  - Parking
+
+categorical_features:
+  - District
+  - City
+  - Town
+  - Type
+  - EnergyCertificate
+  - EnergyEfficiencyLevel
+  - Floor
+  - ConservationStatus
+  - HasParking
+  - Garage
+  - Elevator
+  - ElectricCarsCharging
+
+# --- ingestion ---------------------------------------------------------------
+ingestion:
+  # TODO: correr o upload à feature store só se True (assim quem não tem Hopsworks key
+  #       corre o resto da pipeline a partir dos CSVs locais).
+  to_feature_store: false
+  feature_group_version: 1
+  event_time: "PublishDate"
+  primary_key: "index"
+
+# --- data_drift --------------------------------------------------------------
+data_drift:
+  # TODO: motor de drift e config
+  engine: "evidently"          # ou "nannyml"
+  # features_to_monitor: [...]  # subset a monitorizar (default: numeric_features)
+  # inject_artificial_drift: false  # extra: injetar drift p/ demonstrar deteção
+
+# --- reporting ---------------------------------------------------------------
+reporting:
+  # TODO: config do relatório consolidado
+  report_path: "data/08_reporting"

@@ -12,15 +12,24 @@ dependencies = [
     "hopsworks>=4.8.1",
     "ipywidgets>=8.1.8",
     "jupyterlab>=4.5.6",
+    "kedro>=1.3.1",
+    "kedro-datasets>=4.0.0",       # TODO: necessário p/ pandas.CSVDataset/Pickle/JSON/Matplotlib no catalog
     "kedro-mlflow>=2.0.2",
     "mlflow>=3.11.1",
     "optuna>=4.8.0",
     "prefect>=3.6.27",
+    "scikit-learn>=1.6",           # modelos de regressão + métricas
+    "shap>=0.46",                  # TODO: feature_selection (SHAP do champion)
     "setuptools<81",
     "ucimlrepo>=0.0.7",
     "vadersentiment>=3.3.2",
     "ydata-profiling<=4.18.3",
+    # --- opcionais (descomentar conforme a escolha da equipa) ---
+    # "nannyml>=0.12",             # alternativa/complemento ao evidently p/ drift
+    # "pandera>=0.20",             # validação de schema (blueprint), além do Great Expectations
 ]
+# TODO: depois de mexer aqui, re-gerar o lock e o requirements.txt:
+#   uv lock && uv export --format requirements-txt -o requirements.txt
 [tool.kedro]
 package_name = "kedro_temp_mlops"
 project_name = "my-mlops-project"

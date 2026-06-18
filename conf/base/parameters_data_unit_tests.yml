@@ -1,0 +1,50 @@
+# Regras/limites dos asserts Great Expectations — vêm do EDA. Nada hard-coded nos nodes.
+
+data_unit_tests:
+  # TODO: afinar todos os limites com base no EDA.ipynb
+
+  # Tipos esperados (ExpectColumnValuesToBeOfType)
+  column_types:
+    Price: float
+    GrossArea: float
+    TotalArea: float
+    LivingArea: float
+    ConstructionYear: int
+
+  # Limites numéricos (ExpectColumnMinToBeBetween / ExpectColumnValuesToBeBetween)
+  ranges:
+    Price: { min: 0, min_strict: true }      # Price > 0
+    GrossArea: { min: 0 }                     # áreas >= 0
+    TotalArea: { min: 0 }
+    LivingArea: { min: 0 }
+    ConstructionYear: { min: 1800, max: 2026 }
+
+  # Conjuntos válidos (ExpectColumnDistinctValuesToBeInSet)
+  valid_sets:
+    Type:
+      - Apartment
+      - House
+      - Farm
+      # TODO: completar com os valores reais do EDA
+    EnergyCertificate:
+      - "A+"
+      - A
+      - B
+      - "B-"
+      - C
+      - D
+      - E
+      - F
+      - G
+      - NC
+      # TODO: confirmar set completo no EDA
+
+  # Asserts que, se falharem, BLOQUEIAM o semáforo (write_traffic_light)
+  critical_expectations:
+    - "Price > 0"
+    - "ConstructionYear in [1800, 2026]"
+
+  # Semáforo (melhoria vossa)
+  traffic_light:
+    flag_path: "data/08_reporting/PIPELINE_OK.flag"
+    fail_flag_path: "data/08_reporting/PIPELINE_FAIL.flag"

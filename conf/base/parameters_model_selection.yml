@@ -1,0 +1,25 @@
+# Modelos candidatos (challengers) + espaços de busca Optuna.
+
+model_selection:
+  metric: "rmse"             # rmse | mae | r2
+  direction: "minimize"      # ⚠️ RMSE menor é melhor -> minimize
+  n_trials: 30               # TODO: mais trials = melhor modelo mas mais lento (trade-off no relatório)
+  cv_folds: 3
+
+  # PASSO 1 — challengers: tipos de modelo a comparar
+  candidates:
+    - RandomForestRegressor
+    - GradientBoostingRegressor
+    # - XGBRegressor          # opcional
+    # - LGBMRegressor         # opcional
+
+  # PASSO 2 — espaços de busca Optuna por modelo (TODO: afinar)
+  search_spaces:
+    RandomForestRegressor:
+      n_estimators: { low: 100, high: 600, step: 50 }
+      max_depth: { low: 3, high: 30 }
+      min_samples_leaf: { low: 1, high: 20 }
+    GradientBoostingRegressor:
+      n_estimators: { low: 100, high: 600, step: 50 }
+      learning_rate: { low: 0.01, high: 0.3, log: true }
+      max_depth: { low: 2, high: 8 }

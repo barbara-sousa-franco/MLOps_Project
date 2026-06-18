@@ -1,0 +1,27 @@
+# Config do champion + Model Registry + SHAP/feature selection.
+
+model_train:
+  # baseline (fallback quando não há champion ainda) — ⚠️ apanhar FileNotFoundError, não except nu
+  baseline_model_params:
+    n_estimators: 200
+    max_depth: 12
+    random_state: 42
+
+  # feature selection (opção A do blueprint): SHAP do champion -> best_cols -> retreino
+  use_feature_selection: false   # TODO: pôr True na 2ª passagem, depois de feature_selection gerar best_cols
+
+  # MLflow Model Registry (construção vossa)
+  registry:
+    model_name: "house_price_model"
+    challenger_alias: "challenger"
+    champion_alias: "champion"
+
+  # SHAP / feature_selection
+  shap:
+    top_n: 15                    # top-N features por |SHAP| médio (ou usar threshold)
+    # threshold: null
+
+  metrics:                       # métricas de REGRESSÃO a registar (não accuracy!)
+    - rmse
+    - mae
+    - r2

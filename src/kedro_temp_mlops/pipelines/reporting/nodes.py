@@ -1,55 +1,34 @@
-import matplotlib
-import matplotlib.pyplot as plt
+"""Nodes da pipeline `reporting`."""
+
+import logging
+
 import pandas as pd
-import plotly.express as px  # noqa:  F401
-import plotly.graph_objs as go
-import seaborn as sn
+
+logger = logging.getLogger(__name__)
 
 
-# This function uses plotly.express
-def compare_passenger_capacity_exp(preprocessed_shuttles: pd.DataFrame):
-    return (
-        preprocessed_shuttles.groupby(["shuttle_type"])
-        .mean(numeric_only=True)
-        .reset_index()
-    )
+def build_report(
+    metrics: dict,
+    shap_plot,
+    drift_result: pd.DataFrame,
+    test_results: pd.DataFrame,
+    parameters: dict,
+):
+    """Consolida tudo o que vai para o relatório de 6 páginas.
 
+    Args:
+        metrics: métricas do champion (production_model_metrics).
+        shap_plot: feature importance (SHAP).
+        drift_result: resultado do drift.
+        test_results: resultado dos data unit tests (reporting_tests).
+        parameters: config de reporting.
 
-# This function uses plotly.graph_objects
-def compare_passenger_capacity_go(preprocessed_shuttles: pd.DataFrame):
+    Returns:
+        Artefacto(s) consolidado(s) para o relatório (08_reporting).
 
-    data_frame = (
-        preprocessed_shuttles.groupby(["shuttle_type"])
-        .mean(numeric_only=True)
-        .reset_index()
-    )
-    fig = go.Figure(
-        [
-            go.Bar(
-                x=data_frame["shuttle_type"],
-                y=data_frame["passenger_capacity"],
-            )
-        ]
-    )
-
-    return fig
-
-
-def create_confusion_matrix(companies: pd.DataFrame):
-    matplotlib.use('Agg')
-
-    actuals = [0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1]
-    predicted = [1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1]
-    data = {"y_Actual": actuals, "y_Predicted": predicted}
-    df = pd.DataFrame(data, columns=["y_Actual", "y_Predicted"])
-
-    confusion_matrix = pd.crosstab(
-        df["y_Actual"], df["y_Predicted"], rownames=["Actual"], colnames=["Predicted"]
-    )
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sn.heatmap(confusion_matrix, annot=True, fmt='d', cmap='Blues', ax=ax)
-    ax.set_title('Confusion Matrix')
-    plt.tight_layout()
-
-    return fig
+    TODO build_report:
+      - consolidar métricas do champion, feature importance (SHAP),
+        resultado dos data tests e drift num único report
+    """
+    # TODO: implementar
+    raise NotImplementedError

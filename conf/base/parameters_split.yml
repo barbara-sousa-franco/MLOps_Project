@@ -1,0 +1,12 @@
+# Config do train/test split.
+
+split:
+  test_size: 0.2
+  random_state: 42          # TODO: idealmente reutilizar `seed` global (OmegaConf interpolation)
+  target_col: "Price"
+
+  # ⚠️ Regressão: NÃO usar stratify=y (bug do exemplo). Opções:
+  #   - stratify: false               -> split simples
+  #   - stratify: true + n_bins: N    -> qcut do Price em N bins p/ cobrir toda a gama (recomendado)
+  stratify: true
+  n_bins: 10

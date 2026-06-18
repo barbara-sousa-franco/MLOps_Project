@@ -9,6 +9,13 @@ https://docs.kedro.org/en/stable/kedro_project_setup/settings.html."""
 # Hooks are executed in a Last-In-First-Out (LIFO) order.
 # HOOKS = (ProjectHooks(),)
 
+# TODO (kedro-mlflow): garantir que o MlflowHook está ativo para os
+# MlflowArtifactDataset do catalog funcionarem (encoder, modelo, shap_plot, metrics).
+# Normalmente o kedro-mlflow auto-regista o hook via entrypoint do plugin (basta o
+# pacote estar instalado). Se precisarem de o forçar/ordenar explicitamente:
+# from kedro_mlflow.framework.hooks import MlflowHook
+# HOOKS = (MlflowHook(),)
+
 # Installed plugins for which to disable hook auto-registration.
 # DISABLE_HOOKS_FOR_PLUGINS = ("kedro-viz",)
 
