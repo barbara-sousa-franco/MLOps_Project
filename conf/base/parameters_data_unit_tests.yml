@@ -1,31 +1,50 @@
-# Regras/limites dos asserts Great Expectations — vêm do EDA. Nada hard-coded nos nodes.
+# Regras/limites dos asserts Great Expectations — valores reais confirmados no raw.
+# Config PARTILHADA: usada pela validação efémera da `ingestion` (proteção antes do
+# upload) e pela pipeline `data_unit_tests` (revalidação + semáforo). Nada hard-coded.
 
 data_unit_tests:
-  # TODO: afinar todos os limites com base no EDA.ipynb
+  target_col: ${target_col}
 
-  # Tipos esperados (ExpectColumnValuesToBeOfType)
+  # Tipos esperados (ExpectColumnValuesToBeOfType). "float" casa com float64.
+  # NOTA: ConstructionYear é float64 no raw (tem nulos) — NÃO se exige int.
   column_types:
     Price: float
     GrossArea: float
     TotalArea: float
     LivingArea: float
-    ConstructionYear: int
 
-  # Limites numéricos (ExpectColumnMinToBeBetween / ExpectColumnValuesToBeBetween)
+  # Limites numéricos (ExpectColumnValuesToBeBetween — ignora nulos por defeito).
+  # NOTA: as áreas têm NEGATIVOS no raw (GrossArea min −7, TotalArea min −7M, BuiltArea −1)
+  #       — isso é sujidade tratada no preprocessing, por isso "área >= 0" NÃO entra aqui
+  #       (rebentaria sobre dados crus). Reavaliar como assert PÓS-preprocessing (Fase 1).
   ranges:
-    Price: { min: 0, min_strict: true }      # Price > 0
-    GrossArea: { min: 0 }                     # áreas >= 0
-    TotalArea: { min: 0 }
-    LivingArea: { min: 0 }
-    ConstructionYear: { min: 1800, max: 2026 }
+    Price: { min: 0, strict_min: true }        # Price > 0 (min real = 1.0 após drop de nulos)
+    ConstructionYear: { min: 1800, max: 2026 } # real 1900–2025
 
-  # Conjuntos válidos (ExpectColumnDistinctValuesToBeInSet)
+  # Conjuntos válidos (ExpectColumnDistinctValuesToBeInSet) — valores reais do dataset.
   valid_sets:
     Type:
       - Apartment
-      - House
+      - Building
+      - Duplex
+      - Estate
       - Farm
-      # TODO: completar com os valores reais do EDA
+      - Garage
+      - Hotel
+      - House
+      - Industrial
+      - Investment
+      - Land
+      - Manor
+      - Mansion
+      - Office
+      - Other - Commercial
+      - Other - Residential
+      - Storage
+      - Store
+      - Studio
+      - Transfer of lease
+      - Warehouse
     EnergyCertificate:
       - "A+"
       - A
@@ -37,14 +56,15 @@ data_unit_tests:
       - F
       - G
       - NC
-      # TODO: confirmar set completo no EDA
+      - No Certificate
+      - Not available
 
-  # Asserts que, se falharem, BLOQUEIAM o semáforo (write_traffic_light)
+  # Asserts críticos que, se falharem, BLOQUEIAM o semáforo (write_traffic_light) — Fase 1 step 5.
   critical_expectations:
     - "Price > 0"
     - "ConstructionYear in [1800, 2026]"
 
-  # Semáforo (melhoria vossa)
+  # Semáforo (melhoria vossa) — usado pela pipeline data_unit_tests.
   traffic_light:
     flag_path: "data/08_reporting/PIPELINE_OK.flag"
     fail_flag_path: "data/08_reporting/PIPELINE_FAIL.flag"
