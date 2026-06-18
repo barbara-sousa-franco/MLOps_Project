@@ -10,22 +10,28 @@
 # --- 01_raw -------------------------------------------------------------------
 raw_house_data:
   type: pandas.CSVDataset
-  # TODO: o blueprint prevê data/01_raw/portugal_listings.csv. O ficheiro atual está em
-  #       data/portugal_listinigs.csv (com typo). Mover/renomear e atualizar este path.
-  filepath: data/portugal_listinigs.csv
+  filepath: data/01_raw/portugal_listings.csv
+  load_args:
+    low_memory: false        # várias colunas têm tipos mistos (nulls) — evita DtypeWarning
 
 # --- 02_intermediate ----------------------------------------------------------
 ingested_data:
   type: pandas.CSVDataset
   filepath: data/02_intermediate/ingested_data.csv
+  load_args:
+    low_memory: false           # tipos mistos (nulls elevados) -> evita DtypeWarning
 
 ref_data:                       # referência p/ drift (distribuição de treino)
   type: pandas.CSVDataset
   filepath: data/02_intermediate/ref_data.csv
+  load_args:
+    low_memory: false
 
 ana_data:                       # batch a analisar p/ drift / inferência
   type: pandas.CSVDataset
   filepath: data/02_intermediate/ana_data.csv
+  load_args:
+    low_memory: false
 
 # --- 03_primary ---------------------------------------------------------------
 preprocessed_training_data:

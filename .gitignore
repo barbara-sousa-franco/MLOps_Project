@@ -221,6 +221,16 @@ __marimo__/
 # Kedro local conf (segredos: Hopsworks key, etc.)
 conf/local/credentials.yml
 
-# Semáforo gerado em runtime
-data/08_reporting/PIPELINE_OK.flag
-data/08_reporting/PIPELINE_FAIL.flag
+# Camadas de dados GERADAS pelas pipelines (manter só 01_raw + os .gitkeep)
+data/02_intermediate/**
+data/03_primary/**
+data/04_feature/**
+data/05_model_input/**
+data/06_models/**
+data/07_model_output/**
+data/08_reporting/**
+!data/**/.gitkeep
+
+# MLflow tracking local
+mlruns/
+mlflow.db

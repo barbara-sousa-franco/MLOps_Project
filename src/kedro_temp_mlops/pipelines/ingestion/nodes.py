@@ -73,29 +73,89 @@ def to_feature_store(
     raise NotImplementedError
 
 
-def ingestion(df_raw: pd.DataFrame, parameters: dict, credentials: dict) -> pd.DataFrame:
-    """Ingestão dos dados crus das casas + validação GX efémera + upload opcional à FS.
+def ingestion(df_raw: pd.DataFrame, parameters: dict) -> pd.DataFrame:
+    """Ingestão dos dados crus das casas.
+
+    Versão MÍNIMA funcional (Fase 0): cria a primary key `index`, descarta linhas sem
+    target e devolve o dataset. A validação GX efémera, a separação em 3 grupos e o
+    upload opcional à Hopsworks ficam por implementar (Fase 1/5).
 
     Args:
         df_raw: `raw_house_data` (portugal_listings).
-        parameters: parâmetros de ingestão (inclui flag `to_feature_store`).
-        credentials: credenciais Hopsworks.
+        parameters: parâmetros de ingestão (target_col, primary_key, to_feature_store...).
 
     Returns:
         df_full (ingested_data) — dataset completo para as pipelines seguintes.
 
-    TODO ingestion:
-      - (se houver dataset adicional, merge; senão usar só portugal_listings)
-      - reset_index(names="index"); usar PublishDate como event_time
-        (vantagem vs exemplo: já existe PublishDate, não é preciso inventar datetime)
+    TODO ingestion (Fase 1/5):
       - separar em 3 grupos: numéricos, categóricos, target (Price)
       - validação GX EFÉMERA em memória ANTES do upload (build_expectation_suite +
         ValidationDefinition); se falhar -> raise (como o prof)
-      - se parameters["to_feature_store"]: to_feature_store() dos 3 grupos
-      - devolver df_full
+      - usar PublishDate como event_time (NOTA: ~78% nulos — ver ASSUMPTIONS)
+      - se parameters["to_feature_store"]: to_feature_store() dos 3 grupos (precisa de
+        credentials Hopsworks — re-adicionar o input "credentials" ao nó nessa altura)
     """
-    # TODO: implementar
-    raise NotImplementedError
+    target_col = parameters["target_col"]
+    primary_key = parameters.get("primary_key", "index")
+
+    df = df_raw.copy()
+
+    # primary key estável para a feature store / joins (event_time = PublishDate, Fase 5)
+    if primary_key not in df.columns:
+        df = df.reset_index(names=primary_key)
+
+    # o target tem de existir (Price tem ~0.2% nulos no raw)
+    n_before = len(df)
+    df = df.dropna(subset=[target_col]).reset_index(drop=True)
+    logger.info(
+        "Ingestion: %d linhas (descartadas %d sem '%s').",
+        len(df),
+        n_before - len(df),
+        target_col,
+    )
+
+    if parameters.get("to_feature_store", False):
+        # TODO (Fase 5): upload dos grupos para Hopsworks via to_feature_store().
+        logger.warning("to_feature_store=True mas o upload ainda não está implementado.")
+
+    return df
+
+
+def split_reference_analysis(ingested_data: pd.DataFrame, parameters: dict):
+    """Parte o dataset ingerido em referência (baseline) e batch de análise.
+
+    `ref_data` representa a distribuição de referência (treino) e `ana_data` o "batch
+    novo" que alimenta o drift e a inferência.
+
+    NOTA: `PublishDate` está ~78% nula, por isso um split TEMPORAL é inviável — usa-se um
+    split ALEATÓRIO reprodutível (por `seed`). Ver ASSUMPTIONS.md.
+
+    Args:
+        ingested_data: saída de `ingestion`.
+        parameters: usa `reference_fraction` (fração para referência) e `seed`.
+
+    Returns:
+        Tuple (ref_data, ana_data).
+
+    TODO (extra criatividade, Fase 3): injetar drift artificial em `ana_data` para
+    demonstrar a deteção de drift (sugestão do prof).
+    """
+    ref_fraction = parameters.get("reference_fraction", 0.8)
+    seed = parameters["seed"]
+
+    ref_data = ingested_data.sample(frac=ref_fraction, random_state=seed)
+    ana_data = ingested_data.drop(index=ref_data.index)
+
+    ref_data = ref_data.reset_index(drop=True)
+    ana_data = ana_data.reset_index(drop=True)
+    logger.info(
+        "Split ref/ana: ref_data=%d linhas, ana_data=%d linhas (frac=%.2f, seed=%d).",
+        len(ref_data),
+        len(ana_data),
+        ref_fraction,
+        seed,
+    )
+    return ref_data, ana_data
 
 
 def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame:

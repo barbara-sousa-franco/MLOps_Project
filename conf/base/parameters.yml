@@ -64,12 +64,15 @@ categorical_features:
 
 # --- ingestion ---------------------------------------------------------------
 ingestion:
+  target_col: ${target_col}      # interpolação OmegaConf do valor global
+  seed: ${seed}
+  primary_key: "index"
+  reference_fraction: 0.8        # fração para ref_data; o resto vai para ana_data (batch)
+  event_time: "PublishDate"      # NOTA: ~78% nulos -> usado só na FS (Fase 5), não no split
+  feature_group_version: 1
   # TODO: correr o upload à feature store só se True (assim quem não tem Hopsworks key
   #       corre o resto da pipeline a partir dos CSVs locais).
   to_feature_store: false
-  feature_group_version: 1
-  event_time: "PublishDate"
-  primary_key: "index"
 
 # --- data_drift --------------------------------------------------------------
 data_drift:
