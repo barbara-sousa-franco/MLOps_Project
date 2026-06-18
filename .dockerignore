@@ -1,0 +1,28 @@
+# Ficheiros/pastas a NÃO copiar para a imagem Docker.
+# TODO: rever conforme o que o container precisa em runtime.
+
+.git
+.gitignore
+.venv
+.venv-mlops
+__pycache__/
+*.py[codz]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Dados pesados e artefactos locais (montar como volume se necessário)
+data/0*/
+mlruns/
+.viz/
+
+# Notebooks e docs
+notebooks/
+*.ipynb
+
+# Segredos (NUNCA na imagem)
+.env
+conf/local/credentials.yml
+
+# OS
+.DS_Store

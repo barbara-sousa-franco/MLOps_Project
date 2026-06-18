@@ -217,3 +217,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 .DS_Store
+
+# Kedro local conf (segredos: Hopsworks key, etc.)
+conf/local/credentials.yml
+
+# Semáforo gerado em runtime
+data/08_reporting/PIPELINE_OK.flag
+data/08_reporting/PIPELINE_FAIL.flag

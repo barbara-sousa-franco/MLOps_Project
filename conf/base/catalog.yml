@@ -1,96 +1,113 @@
-# Here you can define all your data sets by using simple YAML syntax.
+# Data Catalog — caso das casas (portugal_listings).
+# Convenção: tudo o que deve ir para o MLflow usa MlflowArtifactDataset (truque do prof).
+# Docs: https://docs.kedro.org/en/stable/data/data_catalog.html
 #
-# Documentation for this file format can be found in "The Data Catalog"
-# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
-#
-# We support interacting with a variety of data stores including local file systems, cloud, network and HDFS
-#
-# An example data set definition can look as follows:
-#
-#bikes:
-#  type: pandas.CSVDataset
-#  filepath: "data/01_raw/bikes.csv"
-#
-#weather:
-#  type: spark.SparkDataset
-#  filepath: s3a://your_bucket/data/01_raw/weather*
-#  file_format: csv
-#  credentials: dev_s3
-#  load_args:
-#    header: True
-#    inferSchema: True
-#  save_args:
-#    sep: '|'
-#    header: True
-#
-#scooters:
-#  type: pandas.SQLTableDataset
-#  credentials: scooters_credentials
-#  table_name: scooters
-#  load_args:
-#    index_col: ['name']
-#    columns: ['name', 'gear']
-#  save_args:
-#    if_exists: 'replace'
-#    # if_exists: 'fail'
-#    # if_exists: 'append'
-#
-# The Data Catalog supports being able to reference the same file using two different Dataset implementations
-# (transcoding), templating and a way to reuse arguments that are frequently repeated. See more here:
-# https://docs.kedro.org/en/stable/data/data_catalog.html
+# TODO geral:
+#   - confirmar os tipos (CSV/Pickle/JSON/Matplotlib) e versionamento
+#   - os datasets vindos da feature store (ingested_data/ref_data/ana_data) podem ser
+#     materializados em CSV local para quem não tiver Hopsworks key (ver risks no relatório)
 
-companies:
+# --- 01_raw -------------------------------------------------------------------
+raw_house_data:
   type: pandas.CSVDataset
-  filepath: data/01_raw/companies.csv
+  # TODO: o blueprint prevê data/01_raw/portugal_listings.csv. O ficheiro atual está em
+  #       data/portugal_listinigs.csv (com typo). Mover/renomear e atualizar este path.
+  filepath: data/portugal_listinigs.csv
 
-reviews:
+# --- 02_intermediate ----------------------------------------------------------
+ingested_data:
   type: pandas.CSVDataset
-  filepath: data/01_raw/reviews.csv
+  filepath: data/02_intermediate/ingested_data.csv
 
-shuttles:
-  type: pandas.ExcelDataset
-  filepath: data/01_raw/shuttles.xlsx
-  load_args:
-    engine: openpyxl
+ref_data:                       # referência p/ drift (distribuição de treino)
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/ref_data.csv
 
-preprocessed_companies:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/preprocessed_companies.parquet
+ana_data:                       # batch a analisar p/ drift / inferência
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/ana_data.csv
 
-preprocessed_shuttles:
-  type: pandas.ParquetDataset
-  filepath: data/02_intermediate/preprocessed_shuttles.parquet
+# --- 03_primary ---------------------------------------------------------------
+preprocessed_training_data:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/preprocessed_train_data.csv
 
-model_input_table:
-  type: pandas.ParquetDataset
-  filepath: data/03_primary/model_input_table.parquet
+preprocessed_batch_data:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/preprocessed_batch_data.csv
 
-regressor:
-  type: pickle.PickleDataset
-  filepath: data/06_models/regressor.pickle
-  versioned: true
+# --- 04_feature ---------------------------------------------------------------
+encoder_transform:              # artifact MLflow (Pickle)
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/04_feature/encoder.pkl
 
-shuttle_passenger_capacity_plot_exp:
-  type: plotly.PlotlyDataset
-  filepath: data/08_reporting/shuttle_passenger_capacity_plot_exp.json
-  versioned: true
-  plotly_args:
-    type: bar
-    fig:
-      x: shuttle_type
-      y: passenger_capacity
-      orientation: h
-    layout:
-      xaxis_title: Shuttles
-      yaxis_title: Average passenger capacity
-      title: Shuttle Passenger capacity
+# --- 05_model_input -----------------------------------------------------------
+X_train:
+  type: pandas.CSVDataset
+  filepath: data/05_model_input/X_train.csv
+X_test:
+  type: pandas.CSVDataset
+  filepath: data/05_model_input/X_test.csv
+y_train:
+  type: pandas.CSVDataset
+  filepath: data/05_model_input/y_train.csv
+y_test:
+  type: pandas.CSVDataset
+  filepath: data/05_model_input/y_test.csv
 
-shuttle_passenger_capacity_plot_go:
-  type: plotly.JSONDataset
-  filepath: data/08_reporting/shuttle_passenger_capacity_plot_go.json
-  versioned: true
+# --- 06_models ----------------------------------------------------------------
+best_columns:                   # artifact MLflow (Pickle) — saída do SHAP
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/06_models/best_cols.pkl
 
-dummy_confusion_matrix:
-  type: matplotlib.MatplotlibDataset
-  filepath: data/08_reporting/dummy_confusion_matrix.png
-  versioned: true
+production_columns:             # artifact MLflow (Pickle)
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/06_models/production_cols.pkl
+
+production_model:               # artifact MLflow (Pickle) — o champion
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/06_models/production_model.pkl
+
+# --- 07_model_output ----------------------------------------------------------
+predictions:
+  type: pandas.CSVDataset
+  filepath: data/07_model_output/predictions.csv
+
+# --- 08_reporting -------------------------------------------------------------
+reporting_tests:                # resultado dos data unit tests (GX)
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/data_tests.csv
+
+production_model_metrics:       # artifact MLflow (JSON) — RMSE/MAE/R²
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: json.JSONDataset
+    filepath: data/08_reporting/production_model_metrics.json
+
+drift_result:
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/drift_result.csv
+
+drift_report:                   # HTML do nannyml/evidently
+  type: text.TextDataset
+  filepath: data/08_reporting/data_drift_report.html
+
+shap_plot:                      # artifact MLflow (Matplotlib)
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: matplotlib.MatplotlibDataset
+    filepath: data/08_reporting/shap_plot.png
+
+# TODO datasets ainda por mapear (objetos passados entre nós que talvez não precisem
+#      de persistência — podem ficar como MemoryDataset implícito):
+#   - clean_training_data, all_columns, champion_model, registered_model_version,
+#     shap_values, traffic_light_flag, final_report
+#   Decidir quais persistir (CSV/Pickle) vs deixar em memória.

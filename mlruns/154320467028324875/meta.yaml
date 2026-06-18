@@ -1,0 +1,8 @@
+artifact_location: file:///Users/mariacarvalho/Documents/GitHub/MLOps_Project/mlruns/154320467028324875
+creation_time: 1781791358364
+experiment_id: '154320467028324875'
+last_update_time: 1781791358364
+lifecycle_stage: active
+name: house_price_prediction
+trace_location: null
+workspace: default

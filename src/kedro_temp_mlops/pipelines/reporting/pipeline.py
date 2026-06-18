@@ -1,30 +1,25 @@
-from kedro.pipeline import Node, Pipeline
+"""Pipeline `reporting`."""
 
-from .nodes import (
-    compare_passenger_capacity_exp,
-    compare_passenger_capacity_go,
-    create_confusion_matrix,
-)
+from kedro.pipeline import Pipeline, node, pipeline
+
+from .nodes import build_report
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """This is a simple pipeline which generates a pair of plots"""
-    return Pipeline(
+    """Cria a pipeline de reporting. outputs: `final_report`."""
+    return pipeline(
         [
-            Node(
-                func=compare_passenger_capacity_exp,
-                inputs="preprocessed_shuttles",
-                outputs="shuttle_passenger_capacity_plot_exp",
-            ),
-            Node(
-                func=compare_passenger_capacity_go,
-                inputs="preprocessed_shuttles",
-                outputs="shuttle_passenger_capacity_plot_go",
-            ),
-            Node(
-                func=create_confusion_matrix,
-                inputs="companies",
-                outputs="dummy_confusion_matrix",
+            node(
+                func=build_report,
+                inputs=[
+                    "production_model_metrics",
+                    "shap_plot",
+                    "drift_result",
+                    "reporting_tests",
+                    "params:reporting",
+                ],
+                outputs="final_report",
+                name="build_report_node",
             ),
         ]
     )
