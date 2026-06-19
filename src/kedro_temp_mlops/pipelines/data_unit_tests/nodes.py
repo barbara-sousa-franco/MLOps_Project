@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_validation_results(validation_results) -> pd.DataFrame:
+    """Extract validation results into a pandas DataFrame."""
+
     vd = (validation_results.to_json_dict()
           if hasattr(validation_results, "to_json_dict") else validation_results)
     rows = []
@@ -45,6 +47,8 @@ def get_validation_results(validation_results) -> pd.DataFrame:
 
 
 def unit_test(ingested_data: pd.DataFrame, parameters: dict) -> pd.DataFrame:
+    """Run data unit tests on ingested data."""
+
     logger.info("Starting official data validation (strict)...")
 
     context = gx.get_context(mode="ephemeral")
@@ -81,6 +85,10 @@ def unit_test(ingested_data: pd.DataFrame, parameters: dict) -> pd.DataFrame:
 
 
 def write_traffic_light(df_validation: pd.DataFrame, parameters: dict) -> str:
+    """Write traffic light flag based on validation results.
+    Returns the path to the traffic light file.
+    """
+    
     tl = parameters.get("traffic_light", {})
     ok_path   = Path(tl.get("flag_path", "data/08_reporting/PIPELINE_OK.flag"))
     fail_path = Path(tl.get("fail_flag_path", "data/08_reporting/PIPELINE_FAIL.flag"))
