@@ -1,4 +1,4 @@
-"""Nodes da pipeline `model_predict`."""
+"""Nodes for the `model_predict` pipeline."""
 
 import logging
 
@@ -13,21 +13,21 @@ def predict(
     best_columns,
     parameters: dict,
 ) -> pd.DataFrame:
-    """Prevê o Price no batch novo com o champion + best_cols.
+    """Predict Price on the new batch using the champion model + best_cols.
 
     Args:
-        production_model: champion treinado.
-        preprocessed_batch_data: batch pré-processado (preprocessing_batch).
-        best_columns: colunas selecionadas por SHAP.
-        parameters: config (inclui use_log_target para inverter log1p).
+        production_model: trained champion.
+        preprocessed_batch_data: pre-processed batch (preprocessing_batch).
+        best_columns: columns selected by SHAP.
+        parameters: config (includes use_log_target to invert log1p).
 
     Returns:
-        DataFrame com as predições (07_model_output).
+        DataFrame with predictions (07_model_output).
 
     TODO predict:
-      - selecionar best_columns no batch; model.predict(...)
-      - se parameters["use_log_target"]: aplicar expm1 às predições (inverter log1p)
-      - guardar em 07_model_output
+      - select best_columns in the batch; model.predict(...)
+      - if parameters["use_log_target"]: apply expm1 to predictions (invert log1p)
+      - save to 07_model_output
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

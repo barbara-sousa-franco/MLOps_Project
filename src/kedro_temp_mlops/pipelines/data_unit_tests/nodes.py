@@ -1,23 +1,10 @@
-"""Nodes da pipeline `data_unit_tests`.
+"""Nodes for the `data_unit_tests` pipeline (final version).
 
-Revalida o que sai da feature store com Great Expectations 1.x e ESCREVE O SEMÁFORO
-(melhoria vossa, não está no exemplo do prof). As próximas pipelines verificam a flag
-antes de correr (gatekeeping da dica do prof).
+Reuses build_expectation_suite from ingestion (shared rulebook), validates with
+GX 1.x and writes the traffic light that gates downstream pipelines.
+STRICT (no mostly) -> assumes data received is ALREADY CLEAN.
 """
 
-import logging
-
-import pandas as pd
-
-logger = logging.getLogger(__name__)
-
-
-"""Nodes da pipeline data_unit_tests (versão final).
-
-Reutiliza build_expectation_suite da ingestion (rulebook partilhado), valida com
-GX 1.x e escreve o semáforo que faz gatekeeping às pipelines seguintes.
-ESTRITO (sem mostly) -> assume que recebe dados JÁ LIMPOS.
-"""
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -25,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 import great_expectations as gx
 
-from ..ingestion.nodes import build_expectation_suite  # mesmo rulebook dos dois checkpoints
+from ..ingestion.nodes import build_expectation_suite  # shared rulebook for both checkpoints
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +84,7 @@ def write_traffic_light(df_validation: pd.DataFrame, parameters: dict) -> str:
     tl = parameters.get("traffic_light", {})
     ok_path   = Path(tl.get("flag_path", "data/08_reporting/PIPELINE_OK.flag"))
     fail_path = Path(tl.get("fail_flag_path", "data/08_reporting/PIPELINE_FAIL.flag"))
-    critical_cols = parameters.get("critical_columns")  # ex: [Price, ConstructionYear]
+    critical_cols = parameters.get("critical_columns")
 
     if len(df_validation):
         relevant = (df_validation[df_validation["Column"].isin(critical_cols)]

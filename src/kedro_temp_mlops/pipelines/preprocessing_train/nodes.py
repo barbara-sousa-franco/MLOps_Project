@@ -1,55 +1,55 @@
-"""Nodes da pipeline `preprocessing_train`.
+"""Nodes for the `preprocessing_train` pipeline.
 
-O encoder/scaler é treinado (`fit`) AQUI e SÓ aqui (anti-leakage). É devolvido para
-ser guardado em encoder.pkl (artifact MLflow) e reutilizado no batch (só `transform`).
+The encoder/scaler is trained (`fit`) HERE and ONLY here (anti-leakage). It is returned
+to be saved in encoder.pkl (MLflow artifact) and reused in the batch pipeline (`transform` only).
 """
 
 import logging
 
 import pandas as pd
 
-from .utils import bin_area, energy_to_ordinal, property_age  # noqa: F401  (FE usada em clean/encode)
+from .utils import bin_area, energy_to_ordinal, property_age  # noqa: F401  (FE used in clean/encode)
 
 logger = logging.getLogger(__name__)
 
 
 def clean_data(ingested_data: pd.DataFrame, parameters: dict) -> pd.DataFrame:
-    """Limpa os dados crus das casas (valores impossíveis, outliers, missing).
+    """Clean raw housing data (impossible values, outliers, missing).
 
     Args:
-        ingested_data: dataset vindo da ingestion.
-        parameters: estratégia de limpeza/imputação/outliers (parameters_preprocessing.yml).
+        ingested_data: dataset from ingestion.
+        parameters: cleaning/imputation/outlier strategy (parameters_preprocessing.yml).
 
     Returns:
-        DataFrame limpo (ainda sem encoding).
+        Cleaned DataFrame (not yet encoded).
 
     TODO clean_data:
-      - remover/corrigir valores impossíveis identificados no EDA
-      - tratar outliers extremos (o ~1.38 bilião €, áreas negativas)
-      - imputação de missing (estratégia em parameters: mediana/moda/constante)
-      - aplicar funções de FE de utils.py (property_age, bin_area, energy_to_ordinal)
+      - remove/fix impossible values identified in EDA
+      - handle extreme outliers (~1.38 billion EUR price, negative areas)
+      - impute missing values (strategy in parameters: median/mode/constant)
+      - apply FE functions from utils.py (property_age, bin_area, energy_to_ordinal)
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError
 
 
 def encode_features(clean_df: pd.DataFrame, parameters: dict):
-    """Faz fit do encoder/scaler no treino e devolve dados transformados + encoder.
+    """Fit the encoder/scaler on training data and return transformed data + encoder.
 
     Args:
-        clean_df: saída de `clean_data`.
-        parameters: config de encoding/scaling e flag `use_log_target`.
+        clean_df: output of `clean_data`.
+        parameters: encoding/scaling config and `use_log_target` flag.
 
     Returns:
         Tuple (preprocessed_df, encoder):
-          - preprocessed_df: features codificadas + target (log1p se use_log_target).
-          - encoder: objeto ajustado a guardar em encoder.pkl.
+          - preprocessed_df: encoded features + target (log1p if use_log_target).
+          - encoder: fitted object to be saved in encoder.pkl.
 
     TODO encode_features:
-      - FIT do encoder/scaler AQUI (só treino) — anti-leakage
-      - devolver encoder p/ guardar em encoder.pkl (artifact MLflow)
-      - aplicar log1p ao target (Price) se parameters["use_log_target"]
-        (EDA mostra skew forte — testar e documentar em ASSUMPTIONS.md)
+      - FIT the encoder/scaler HERE (training only) — anti-leakage
+      - return encoder to save in encoder.pkl (MLflow artifact)
+      - apply log1p to target (Price) if parameters["use_log_target"]
+        (EDA shows strong skew — test and document in ASSUMPTIONS.md)
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

@@ -1,6 +1,6 @@
-"""Funções de feature engineering das casas (equivalente ao utils.py do prof).
+"""Feature engineering functions for housing data (equivalent to the professor's utils.py).
 
-Uma função por grupo de features — pequenas, puras e testáveis (cobertas em
+One function per feature group — small, pure and testable (covered in
 tests/pipelines/test_data_preprocessing.py).
 """
 
@@ -8,33 +8,33 @@ import pandas as pd
 
 
 def property_age(df: pd.DataFrame, parameters: dict) -> pd.DataFrame:
-    """Cria a feature de idade do imóvel.
+    """Create the property age feature.
 
     TODO property_age:
-      - idade = parameters["reference_year"] - ConstructionYear  (ref_year em parameters, p.ex. 2026)
-      - tratar ConstructionYear nulo (deixar NaN para imputação a jusante)
+      - age = parameters["reference_year"] - ConstructionYear  (ref_year in parameters, e.g. 2026)
+      - handle null ConstructionYear (leave as NaN for downstream imputation)
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError
 
 
 def bin_area(df: pd.DataFrame, parameters: dict) -> pd.DataFrame:
-    """Faz binning de GrossArea/LivingArea em faixas.
+    """Bin GrossArea/LivingArea into ranges.
 
     TODO bin_area:
-      - pd.cut com os limites definidos em parameters (nada hard-coded)
-      - gerar coluna(s) categóricas de faixa de área
+      - pd.cut with boundaries defined in parameters (nothing hard-coded)
+      - generate categorical area-range column(s)
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError
 
 
 def energy_to_ordinal(df: pd.DataFrame, parameters: dict) -> pd.DataFrame:
-    """Mapeia EnergyCertificate (A+, A, B, ...) para escala ordinal.
+    """Map EnergyCertificate (A+, A, B, ...) to an ordinal scale.
 
     TODO energy_to_ordinal:
-      - usar o mapa ordinal em parameters (ex: {"A+": 7, "A": 6, ..., "F": 1, "NC": 0})
-      - valores fora do mapa -> NaN/categoria desconhecida
+      - use the ordinal map in parameters (e.g. {"A+": 7, "A": 6, ..., "F": 1, "NC": 0})
+      - values outside the map -> NaN/unknown category
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

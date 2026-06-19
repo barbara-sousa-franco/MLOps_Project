@@ -1,7 +1,7 @@
-"""Nodes da pipeline `preprocessing_batch`.
+"""Nodes for the `preprocessing_batch` pipeline.
 
-Reutiliza o `encoder_transform` do treino: aplica `transform` (NUNCA `fit`) ao batch
-novo. Output alimenta drift e predict.
+Reuses the `encoder_transform` from training: applies `transform` (NEVER `fit`) to the
+new batch. Output feeds drift detection and prediction.
 """
 
 import logging
@@ -12,21 +12,21 @@ logger = logging.getLogger(__name__)
 
 
 def preprocess_batch(ana_data: pd.DataFrame, encoder, parameters: dict) -> pd.DataFrame:
-    """Pré-processa um batch novo com o encoder já treinado.
+    """Pre-process a new batch using the already-fitted encoder.
 
     Args:
-        ana_data: batch novo a analisar (02_intermediate/ana_data.csv).
-        encoder: `encoder_transform` ajustado no treino.
-        parameters: mesma config de limpeza/encoding do treino (parameters_preprocessing.yml).
+        ana_data: new batch to analyse (02_intermediate/ana_data.csv).
+        encoder: `encoder_transform` fitted during training.
+        parameters: same cleaning/encoding config as training (parameters_preprocessing.yml).
 
     Returns:
-        preprocessed_batch_data — pronto para drift e inferência.
+        preprocessed_batch_data — ready for drift detection and inference.
 
     TODO preprocess_batch:
-      - aplicar a MESMA limpeza/FE do treino (sem refit)
-      - encoder.transform(...) — NÃO encoder.fit(...)  (anti-leakage)
-      - NÃO aplicar log1p ao target se o batch não tiver target (inferência)
+      - apply the SAME cleaning/FE as training (no refit)
+      - encoder.transform(...) — NOT encoder.fit(...)  (anti-leakage)
+      - do NOT apply log1p to target if the batch has no target (inference)
       - output preprocessed_batch_data
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

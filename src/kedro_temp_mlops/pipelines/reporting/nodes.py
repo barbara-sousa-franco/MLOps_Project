@@ -1,4 +1,4 @@
-"""Nodes da pipeline `reporting`."""
+"""Nodes for the `reporting` pipeline."""
 
 import logging
 
@@ -14,21 +14,21 @@ def build_report(
     test_results: pd.DataFrame,
     parameters: dict,
 ):
-    """Consolida tudo o que vai para o relatório de 6 páginas.
+    """Consolidate everything that goes into the 6-page report.
 
     Args:
-        metrics: métricas do champion (production_model_metrics).
+        metrics: champion metrics (production_model_metrics).
         shap_plot: feature importance (SHAP).
-        drift_result: resultado do drift.
-        test_results: resultado dos data unit tests (reporting_tests).
-        parameters: config de reporting.
+        drift_result: drift detection result.
+        test_results: data unit test results (reporting_tests).
+        parameters: reporting config.
 
     Returns:
-        Artefacto(s) consolidado(s) para o relatório (08_reporting).
+        Consolidated artifact(s) for the report (08_reporting).
 
     TODO build_report:
-      - consolidar métricas do champion, feature importance (SHAP),
-        resultado dos data tests e drift num único report
+      - consolidate champion metrics, feature importance (SHAP),
+        data test results and drift into a single report
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

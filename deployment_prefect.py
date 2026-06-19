@@ -1,8 +1,8 @@
-"""Deployments Prefect agendados (cron). Copia o padrão do exemplo do prof.
+"""Scheduled Prefect deployments (cron). Copies the professor's example pattern.
 
 TODO deployments:
-  - drift diário, treino semanal, data tests nightly (ver blueprint).
-  - usar flow.to_deployment(name=..., cron=...) / serve(...) conforme a versão do Prefect.
+  - daily drift, weekly training, nightly data tests (see blueprint).
+  - use flow.to_deployment(name=..., cron=...) / serve(...) depending on the Prefect version.
 """
 
 import logging
@@ -18,15 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 def deploy():
-    """Cria/serve os deployments agendados.
+    """Create/serve the scheduled deployments.
 
     TODO deploy:
-      - data tests nightly:   cron "0 2 * * *"   -> flow_data_unit_tests
-      - drift diário:         cron "0 6 * * *"   -> flow_monitoring
-      - treino semanal:       cron "0 3 * * 1"   -> flow_training
-      - full pipeline:        manual/on-demand   -> full_pipeline
+      - nightly data tests:  cron "0 2 * * *"   -> flow_data_unit_tests
+      - daily drift:         cron "0 6 * * *"   -> flow_monitoring
+      - weekly training:     cron "0 3 * * 1"   -> flow_training
+      - full pipeline:       manual/on-demand    -> full_pipeline
     """
-    # TODO: implementar (flow.to_deployment(...) + serve(...))
+    # TODO: implement (flow.to_deployment(...) + serve(...))
     raise NotImplementedError
 
 

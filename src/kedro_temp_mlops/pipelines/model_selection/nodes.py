@@ -1,7 +1,7 @@
-"""Nodes da pipeline `model_selection`.
+"""Nodes for the `model_selection` pipeline.
 
-Adapta o padrão do prof para REGRESSÃO + Optuna (em vez de GridSearchCV).
-Métrica de regressão (RMSE menor = melhor!), nunca accuracy.
+Adapts the professor's pattern for REGRESSION + Optuna (instead of GridSearchCV).
+Regression metric (lower RMSE = better!), never accuracy.
 """
 
 import logging
@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 def _get_or_create_experiment_id(experiment_name: str) -> str:
-    """Devolve o id do experimento MLflow, criando-o se não existir (igual ao prof).
+    """Return the MLflow experiment id, creating it if it does not exist (same as the professor).
 
     TODO _get_or_create_experiment_id:
-      - mlflow.get_experiment_by_name(name); se None -> mlflow.create_experiment(name)
-      - devolver experiment_id
+      - mlflow.get_experiment_by_name(name); if None -> mlflow.create_experiment(name)
+      - return experiment_id
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError
 
 
@@ -31,34 +31,34 @@ def model_selection(
     champion_dict: dict | None = None,
     champion_model=None,
 ):
-    """Compara challengers, afina com Optuna e compara com o champion atual.
+    """Compare challengers, tune with Optuna and compare against the current champion.
 
     Args:
-        X_train, X_test, y_train, y_test: dados do split.
-        parameters: candidatos + espaços Optuna (parameters_model_selection.yml).
-        champion_dict: métricas do champion atual (estado de um run anterior; None na 1ª
-            execução). Opcional e NÃO cabeado no grafo para evitar ciclo — carregar
-            internamente do registry/artifact quando existir.
-        champion_model: modelo champion atual (idem).
+        X_train, X_test, y_train, y_test: data from the split.
+        parameters: candidates + Optuna search spaces (parameters_model_selection.yml).
+        champion_dict: metrics of the current champion (state from a previous run; None on
+            the first execution). Optional and NOT wired in the graph to avoid cycles —
+            load internally from the registry/artifact when available.
+        champion_model: current champion model (same).
 
     Returns:
-        selected_model — o melhor modelo (challenger afinado OU champion existente),
-        entregue ao `model_train`.
+        selected_model — the best model (tuned challenger OR existing champion),
+        passed to `model_train`.
 
     TODO model_selection:
-      PASSO 1 — comparar tipos de modelo (challengers):
-        - candidatos: RandomForestRegressor, GradientBoostingRegressor,
-          (XGBoost/LightGBM opcional)
-        - mlflow.sklearn.autolog; treinar cada um; métrica = RMSE ou R² no test
-        - escolher melhor tipo
-      PASSO 2 — tuning com OPTUNA:
-        - def objective(trial): sugerir hiperparâmetros do espaço em parameters
-        - optuna.create_study(direction="minimize" p/ RMSE), n_trials de parameters
-        - cada trial num mlflow nested run
-      PASSO 3 — comparar com champion atual:
-        - se novo score MELHOR que champion_dict (RMSE menor é melhor!) -> devolver novo
-        - senão -> devolver champion existente
-      - devolver selected_model
+      STEP 1 — compare model types (challengers):
+        - candidates: RandomForestRegressor, GradientBoostingRegressor,
+          (XGBoost/LightGBM optional)
+        - mlflow.sklearn.autolog; train each one; metric = RMSE or R² on test
+        - choose the best type
+      STEP 2 — tuning with OPTUNA:
+        - def objective(trial): suggest hyperparameters from the search space in parameters
+        - optuna.create_study(direction="minimize" for RMSE), n_trials from parameters
+        - each trial in a nested mlflow run
+      STEP 3 — compare against current champion:
+        - if new score BETTER than champion_dict (lower RMSE is better!) -> return new model
+        - otherwise -> return existing champion
+      - return selected_model
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

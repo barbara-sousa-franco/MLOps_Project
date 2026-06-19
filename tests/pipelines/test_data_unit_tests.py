@@ -1,29 +1,29 @@
-"""Testes pytest que verificam que os asserts GX APANHAM dados maus."""
+"""Pytest tests that verify GX assertions CATCH bad data."""
 
 import pytest
 
 
 def test_asserts_catch_negative_price():
-    """Injetar Price = -1 deve fazer o unit_test falhar (raise ValueError).
+    """Injecting Price = -1 should make unit_test fail (raise ValueError).
 
     TODO:
-      - construir df mau (uma linha com Price=-1)
-      - assert que unit_test(df_mau, parameters) levanta ValueError
+      - build a bad df (one row with Price=-1)
+      - assert that unit_test(df_bad, parameters) raises ValueError
     """
-    pytest.skip("TODO: implementar quando unit_test estiver pronto")
+    pytest.skip("TODO: implement when unit_test is ready")
 
 
 def test_asserts_catch_invalid_construction_year():
-    """ConstructionYear fora de [1800, 2026] deve falhar.
+    """ConstructionYear outside [1800, 2026] should fail.
 
-    TODO: df com ConstructionYear=1500 -> espera falha.
+    TODO: df with ConstructionYear=1500 -> expect failure.
     """
-    pytest.skip("TODO: implementar quando unit_test estiver pronto")
+    pytest.skip("TODO: implement when unit_test is ready")
 
 
 def test_traffic_light_written_on_success():
-    """Com dados bons, write_traffic_light cria o ficheiro semáforo.
+    """With good data, write_traffic_light creates the traffic light file.
 
-    TODO: correr unit_test + write_traffic_light em dados válidos e assert que a flag existe.
+    TODO: run unit_test + write_traffic_light on valid data and assert the flag exists.
     """
-    pytest.skip("TODO: implementar quando write_traffic_light estiver pronto")
+    pytest.skip("TODO: implement when write_traffic_light is ready")

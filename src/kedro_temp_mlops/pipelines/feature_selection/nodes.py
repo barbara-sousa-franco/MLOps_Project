@@ -1,7 +1,7 @@
-"""Nodes da pipeline `feature_selection` (SHAP).
+"""Nodes for the `feature_selection` pipeline (SHAP).
 
-⚠️ BUG DO EXEMPLO A NÃO COPIAR: `shap_values[:,:,1]` é índice de classe (classificação).
-Em REGRESSÃO não há eixo de classes — usar `shap_values` 2D direto.
+WARNING — BUG IN THE EXAMPLE NOT TO COPY: `shap_values[:,:,1]` is a class index
+(classification). For REGRESSION there is no class axis — use `shap_values` 2D directly.
 """
 
 import logging
@@ -12,42 +12,42 @@ logger = logging.getLogger(__name__)
 
 
 def compute_shap(production_model, X_train: pd.DataFrame, parameters: dict):
-    """Calcula valores SHAP do champion e gera o summary plot.
+    """Compute SHAP values for the champion model and generate the summary plot.
 
     Args:
-        production_model: champion treinado (model_train).
-        X_train: features de treino.
-        parameters: config SHAP (parameters_model_train.yml ou _model_selection.yml).
+        production_model: trained champion (from model_train).
+        X_train: training features.
+        parameters: SHAP config (parameters_model_train.yml or _model_selection.yml).
 
     Returns:
-        Tuple (shap_values, shap_plot) — shap_plot vai como artifact MLflow (png).
+        Tuple (shap_values, shap_plot) — shap_plot is saved as an MLflow artifact (png).
 
     TODO compute_shap:
       - shap.TreeExplainer(model); shap_values = explainer(X_train)
-      - ⚠️ shap.summary_plot(shap_values, X_train, ...) — 2D direto.
-        NÃO usar shap_values[:,:,1] (índice de classe; bug do exemplo)
-      - gerar shap_plot.png -> artifact MLflow
+      - WARNING: shap.summary_plot(shap_values, X_train, ...) — 2D directly.
+        Do NOT use shap_values[:,:,1] (class index; bug in the example)
+      - generate shap_plot.png -> MLflow artifact
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError
 
 
 def select_features(shap_values, X_train: pd.DataFrame, parameters: dict):
-    """Seleciona as top-N features por |SHAP| médio.
+    """Select the top-N features by mean |SHAP|.
 
     Args:
-        shap_values: saída de `compute_shap`.
-        X_train: features de treino (para mapear nomes de colunas).
-        parameters: N ou threshold de seleção.
+        shap_values: output of `compute_shap`.
+        X_train: training features (to map column names).
+        parameters: N or selection threshold.
 
     Returns:
-        best_cols — lista de colunas a guardar em best_cols.pkl (artifact).
+        best_cols — list of columns to save in best_cols.pkl (artifact).
 
     TODO select_features:
-      - top-N features por |SHAP| médio (N ou threshold em parameters)
-      - guardar best_cols.pkl (artifact)
-      - (dica do prof: feature selection a partir do SHAP; best_cols realimenta
+      - top-N features by mean |SHAP| (N or threshold in parameters)
+      - save best_cols.pkl (artifact)
+      - (professor's tip: feature selection from SHAP; best_cols feeds back into
         model_train via use_feature_selection)
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

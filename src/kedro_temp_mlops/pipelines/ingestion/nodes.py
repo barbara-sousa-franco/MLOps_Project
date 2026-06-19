@@ -1,9 +1,9 @@
-"""Nodes da pipeline `ingestion`.
+"""Nodes for the `ingestion` pipeline.
 
-Segue de perto o padrão do exemplo do prof (Hopsworks + Great Expectations inline),
-adaptado ao caso das casas (`portugal_listings`). A validação GX aqui é EFÉMERA
-(em memória, antes do upload à feature store) — a revalidação "oficial" + semáforo
-acontece na pipeline `data_unit_tests`.
+Closely follows the professor's example pattern (Hopsworks + Great Expectations inline),
+adapted to the housing use case (`portugal_listings`). GX validation here is EPHEMERAL
+(in memory, before upload to the feature store) — the "official" revalidation + traffic
+light happens in the `data_unit_tests` pipeline.
 """
 
 import logging
@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 def _build_between(column: str, rng: dict) -> gxe.ExpectColumnValuesToBeBetween:
-    """Constrói um ExpectColumnValuesToBeBetween a partir de {min,max,strict_min,strict_max}.
+    """Build an ExpectColumnValuesToBeBetween from {min, max, strict_min, strict_max}.
 
-    NOTA: ignora nulos por defeito (GX só avalia os valores não-nulos).
+    NOTE: ignores nulls by default (GX only evaluates non-null values).
     """
     return gxe.ExpectColumnValuesToBeBetween(
         column=column,
@@ -32,21 +32,21 @@ def _build_between(column: str, rng: dict) -> gxe.ExpectColumnValuesToBeBetween:
 def build_expectation_suite(
     suite_name: str, feature_group: str, parameters: dict
 ) -> gx.ExpectationSuite:
-    """Constrói uma Great Expectations ExpectationSuite (GX 1.x) por grupo de features.
+    """Build a Great Expectations ExpectationSuite (GX 1.x) for a given feature group.
 
-    As regras vêm todas de `parameters` (parameters_data_unit_tests.yml) — nada hard-coded.
+    All rules come from `parameters` (parameters_data_unit_tests.yml) — nothing hard-coded.
 
     Args:
-        suite_name: Nome da suite a criar.
-        feature_group: Um de {"numerical", "categorical", "target"} — define que
-            expectativas aplicar.
-        parameters: dict de `data_unit_tests` (target_col, column_types, ranges, valid_sets).
+        suite_name: Name of the suite to create.
+        feature_group: One of {"numerical", "categorical", "target"} — determines which
+            expectations to apply.
+        parameters: dict from `data_unit_tests` (target_col, column_types, ranges, valid_sets).
 
     Returns:
-        ExpectationSuite (ainda não adicionada a um contexto) pronta a validar.
+        ExpectationSuite (not yet added to a context) ready to validate.
 
     Raises:
-        ValueError: se `feature_group` não for reconhecido.
+        ValueError: if `feature_group` is not recognised.
     """
     target_col = parameters.get("target_col")
     column_types = parameters.get("column_types", {})
@@ -56,7 +56,7 @@ def build_expectation_suite(
     expectations: list = []
 
     if feature_group == "numerical":
-        # tipos + intervalos das numéricas (exclui o target, que vai no grupo "target")
+        # types + ranges for numerical columns (excludes target, which goes in the "target" group)
         for col, dtype in column_types.items():
             if col == target_col:
                 continue
@@ -79,28 +79,28 @@ def build_expectation_suite(
             expectations.append(_build_between(target_col, ranges[target_col]))
     else:
         raise ValueError(
-            f"feature_group desconhecido: {feature_group!r} "
-            "(esperado: 'numerical', 'categorical' ou 'target')"
+            f"Unknown feature_group: {feature_group!r} "
+            "(expected: 'numerical', 'categorical' or 'target')"
         )
 
     return gx.ExpectationSuite(name=suite_name, expectations=expectations)
 
 
 def _run_ephemeral_validation(df: pd.DataFrame, parameters: dict) -> None:
-    """Valida `df` em memória (GX efémero) contra as 3 suites; faz `raise` se falhar.
+    """Validate `df` in memory (ephemeral GX) against the 3 suites; raises if it fails.
 
-    Proteção ANTES do upload à feature store (padrão do prof). A revalidação "oficial"
-    + semáforo é feita depois na pipeline `data_unit_tests`.
+    Protection BEFORE upload to the feature store (professor's pattern). The "official"
+    revalidation + traffic light is performed afterwards in the `data_unit_tests` pipeline.
 
     Args:
-        df: dataset a validar.
-        parameters: dict de `data_unit_tests` (regras vindas do EDA).
+        df: dataset to validate.
+        parameters: dict from `data_unit_tests` (rules derived from EDA).
 
     Raises:
-        ValueError: se alguma expectation falhar (lista as que falharam no log).
+        ValueError: if any expectation fails (logs the failing ones).
     """
     context = gx.get_context(mode="ephemeral")
-    # silenciar as barras de progresso do GX nos logs
+    # suppress GX progress bars in logs
     context.variables.progress_bars = {"globally": False, "metric_calculations": False}
 
     data_source = context.data_sources.add_pandas("ingestion_source")
@@ -125,10 +125,10 @@ def _run_ephemeral_validation(df: pd.DataFrame, parameters: dict) -> None:
 
     if failed:
         for f in failed:
-            logger.error("Validação GX falhou: %s", f)
-        raise ValueError(f"Validação GX efémera falhou em {len(failed)} expectation(s): {failed}")
+            logger.error("GX validation failed: %s", f)
+        raise ValueError(f"Ephemeral GX validation failed on {len(failed)} expectation(s): {failed}")
 
-    logger.info("Validação GX efémera: todas as expectations passaram.")
+    logger.info("Ephemeral GX validation: all expectations passed.")
 
 
 def to_feature_store(
@@ -139,36 +139,36 @@ def to_feature_store(
     feature_descriptions: dict,
     credentials: dict,
 ):
-    """Faz upload de um grupo de features para a Hopsworks Feature Store.
+    """Upload a feature group to the Hopsworks Feature Store.
 
     Args:
-        data: DataFrame do grupo (numérico / categórico / target) com a primary key.
-        group_name: Nome do feature group em Hopsworks.
-        version: Versão do feature group.
-        description: Descrição do feature group.
-        feature_descriptions: Dict coluna->descrição (update_feature_description).
-        credentials: {"api_key": ..., "project": ...} vindo de conf/local/credentials.yml.
+        data: DataFrame for the group (numerical / categorical / target) with the primary key.
+        group_name: Name of the feature group in Hopsworks.
+        version: Feature group version.
+        description: Feature group description.
+        feature_descriptions: Dict column->description (update_feature_description).
+        credentials: {"api_key": ..., "project": ...} from conf/local/credentials.yml.
 
     Returns:
-        O objeto feature group criado/atualizado.
+        The created/updated feature group object.
 
     TODO to_feature_store:
       - hopsworks.login(api_key=credentials["api_key"], project=credentials["project"])
       - fs = project.get_feature_store()
       - get_or_create_feature_group(primary_key=["index"], event_time="PublishDate")
       - feature_group.insert(data)
-      - update_feature_description(...) por coluna
+      - update_feature_description(...) per column
       - compute_statistics()
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError
 
 
 def _split_feature_groups(df: pd.DataFrame, primary_key: str, target_col: str) -> dict:
-    """Separa o dataset em 3 grupos (numérico/categórico/target) com a primary key.
+    """Split the dataset into 3 groups (numerical/categorical/target) with the primary key.
 
-    Usado pelo upload à feature store (3 feature groups). Cada grupo leva a primary key
-    para permitir o join no read_from_feature_store.
+    Used for the feature store upload (3 feature groups). Each group carries the primary key
+    to allow joins in read_from_feature_store.
     """
     target_df = df[[primary_key, target_col]]
     feature_cols = [c for c in df.columns if c not in (primary_key, target_col)]
@@ -182,81 +182,81 @@ def _split_feature_groups(df: pd.DataFrame, primary_key: str, target_col: str) -
 
 
 def ingestion(df_raw: pd.DataFrame, parameters: dict, validation_params: dict) -> pd.DataFrame:
-    """Ingestão dos dados crus das casas + validação GX efémera (+ upload opcional à FS).
+    """Ingest raw housing data + ephemeral GX validation (+ optional feature store upload).
 
     Args:
         df_raw: `raw_house_data` (portugal_listings).
-        parameters: parâmetros de ingestão (target_col, primary_key, run_validation,
+        parameters: ingestion parameters (target_col, primary_key, run_validation,
             to_feature_store...).
-        validation_params: regras GX (`data_unit_tests`: column_types, ranges, valid_sets).
+        validation_params: GX rules (`data_unit_tests`: column_types, ranges, valid_sets).
 
     Returns:
-        df_full (ingested_data) — dataset completo para as pipelines seguintes.
+        df_full (ingested_data) — complete dataset for downstream pipelines.
 
     Raises:
-        ValueError: se a validação GX efémera falhar (proteção antes do upload).
+        ValueError: if ephemeral GX validation fails (protection before upload).
 
-    TODO ingestion (Fase 5 — Hopsworks):
-      - usar PublishDate como event_time (NOTA: ~78% nulos — ver ASSUMPTIONS)
-      - se parameters["to_feature_store"]: to_feature_store() dos 3 grupos (precisa de
-        credentials Hopsworks — re-adicionar o input "credentials" ao nó nessa altura)
+    TODO ingestion (Phase 5 — Hopsworks):
+      - use PublishDate as event_time (NOTE: ~78% nulls — see ASSUMPTIONS)
+      - if parameters["to_feature_store"]: call to_feature_store() for the 3 groups
+        (requires Hopsworks credentials — re-add the "credentials" input to the node then)
     """
     target_col = parameters["target_col"]
     primary_key = parameters.get("primary_key", "index")
 
     df = df_raw.copy()
 
-    # primary key estável para a feature store / joins (event_time = PublishDate, Fase 5)
+    # stable primary key for the feature store / joins (event_time = PublishDate, Phase 5)
     if primary_key not in df.columns:
         df = df.reset_index(names=primary_key)
 
-    # o target tem de existir (Price tem ~0.2% nulos no raw)
+    # target must exist (Price has ~0.2% nulls in raw)
     n_before = len(df)
     df = df.dropna(subset=[target_col]).reset_index(drop=True)
     logger.info(
-        "Ingestion: %d linhas (descartadas %d sem '%s').",
+        "Ingestion: %d rows (dropped %d without '%s').",
         len(df),
         n_before - len(df),
         target_col,
     )
 
-    # validação GX EFÉMERA em memória ANTES do upload (proteção; raise se falhar)
+    # EPHEMERAL GX validation in memory BEFORE upload (protection; raises if it fails)
     if parameters.get("run_validation", True):
         _run_ephemeral_validation(df, validation_params)
 
     if parameters.get("to_feature_store", False):
-        # separar em 3 grupos para os 3 feature groups da Hopsworks
+        # split into 3 groups for the 3 Hopsworks feature groups
         groups = _split_feature_groups(df, primary_key, target_col)
         logger.info(
-            "Grupos p/ feature store: numerical=%d cols, categorical=%d cols, target=%d cols.",
+            "Feature store groups: numerical=%d cols, categorical=%d cols, target=%d cols.",
             groups["numerical"].shape[1],
             groups["categorical"].shape[1],
             groups["target"].shape[1],
         )
-        # TODO (Fase 5): upload de cada grupo via to_feature_store(...).
-        logger.warning("to_feature_store=True mas o upload Hopsworks ainda não está implementado.")
+        # TODO (Phase 5): upload each group via to_feature_store(...).
+        logger.warning("to_feature_store=True but Hopsworks upload is not yet implemented.")
 
     return df
 
 
 def split_reference_analysis(ingested_data: pd.DataFrame, parameters: dict):
-    """Parte o dataset ingerido em referência (baseline) e batch de análise.
+    """Split the ingested dataset into reference (baseline) and analysis batch.
 
-    `ref_data` representa a distribuição de referência (treino) e `ana_data` o "batch
-    novo" que alimenta o drift e a inferência.
+    `ref_data` represents the reference distribution (training) and `ana_data` the
+    "new batch" that feeds drift detection and inference.
 
-    NOTA: `PublishDate` está ~78% nula, por isso um split TEMPORAL é inviável — usa-se um
-    split ALEATÓRIO reprodutível (por `seed`). Ver ASSUMPTIONS.md.
+    NOTE: `PublishDate` is ~78% null, so a TEMPORAL split is not feasible — a reproducible
+    RANDOM split is used instead (by `seed`). See ASSUMPTIONS.md.
 
     Args:
-        ingested_data: saída de `ingestion`.
-        parameters: usa `reference_fraction` (fração para referência) e `seed`.
+        ingested_data: output of `ingestion`.
+        parameters: uses `reference_fraction` (fraction for reference) and `seed`.
 
     Returns:
         Tuple (ref_data, ana_data).
 
-    TODO (extra criatividade, Fase 3): injetar drift artificial em `ana_data` para
-    demonstrar a deteção de drift (sugestão do prof).
+    TODO (extra creativity, Phase 3): inject artificial drift into `ana_data` to
+    demonstrate drift detection (professor's suggestion).
     """
     ref_fraction = parameters.get("reference_fraction", 0.8)
     seed = parameters["seed"]
@@ -267,7 +267,7 @@ def split_reference_analysis(ingested_data: pd.DataFrame, parameters: dict):
     ref_data = ref_data.reset_index(drop=True)
     ana_data = ana_data.reset_index(drop=True)
     logger.info(
-        "Split ref/ana: ref_data=%d linhas, ana_data=%d linhas (frac=%.2f, seed=%d).",
+        "Split ref/ana: ref_data=%d rows, ana_data=%d rows (frac=%.2f, seed=%d).",
         len(ref_data),
         len(ana_data),
         ref_fraction,
@@ -277,19 +277,19 @@ def split_reference_analysis(ingested_data: pd.DataFrame, parameters: dict):
 
 
 def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame:
-    """Lê os dados de volta da Feature Store (demonstra o ciclo write->read).
+    """Read data back from the Feature Store (demonstrates the write->read cycle).
 
     Args:
-        parameters: parâmetros de ingestão (nomes/versões dos feature groups).
-        credentials: credenciais Hopsworks.
+        parameters: ingestion parameters (feature group names/versions).
+        credentials: Hopsworks credentials.
 
     Returns:
-        DataFrame reconstruído a partir dos feature groups (ingested_data).
+        DataFrame reconstructed from the feature groups (ingested_data).
 
     TODO read_from_feature_store:
       - hopsworks.login(...); fs.get_feature_group(...)
-      - juntar os 3 grupos pela primary key "index"
-      - demonstra o ciclo write->read da dica do prof
+      - join the 3 groups by primary key "index"
+      - demonstrates the write->read cycle from the professor's tip
     """
-    # TODO: implementar
+    # TODO: implement
     raise NotImplementedError

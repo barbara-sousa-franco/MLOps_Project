@@ -1,6 +1,6 @@
-"""Flows Prefect que chamam as pipelines Kedro por nome.
+"""Prefect flows that call Kedro pipelines by name.
 
-Copia o padrão do exemplo do prof. Cada flow chama run_pipeline(<nome>) do
+Copies the professor's example pattern. Each flow calls run_pipeline(<name>) from
 src/kedro_temp_mlops/run_kedro_pipeline.py.
 """
 
@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 @task
 def _run(pipeline_name: str):
-    """Task Prefect que corre uma pipeline Kedro por nome.
+    """Prefect task that runs a Kedro pipeline by name.
 
-    TODO: tratar erros/retries do Prefect aqui (retries=, retry_delay_seconds=).
+    TODO: handle Prefect errors/retries here (retries=, retry_delay_seconds=).
     """
     # TODO: return run_pipeline(pipeline_name)
     raise NotImplementedError
@@ -25,7 +25,7 @@ def _run(pipeline_name: str):
 
 @flow(name="flow_data_unit_tests")
 def flow_data_unit_tests():
-    """Corre só os data unit tests (nightly). Gatekeeper via semáforo.
+    """Run data unit tests only (nightly). Gatekeeper via traffic light.
 
     TODO: _run("data_unit_tests")
     """
@@ -36,7 +36,7 @@ def flow_data_unit_tests():
 def flow_data_prep():
     """ingestion + data_unit_tests + preprocessing_train + split_data.
 
-    TODO: _run("data_prep")  (só se semáforo OK)
+    TODO: _run("data_prep")  (only if traffic light is OK)
     """
     raise NotImplementedError
 
@@ -61,7 +61,7 @@ def flow_inference():
 
 @flow(name="flow_monitoring")
 def flow_monitoring():
-    """data_drift (referência vs batch novo).
+    """data_drift (reference vs new batch).
 
     TODO: _run("monitoring")
     """
@@ -70,10 +70,10 @@ def flow_monitoring():
 
 @flow(name="full_pipeline")
 def full_pipeline():
-    """Sequência completa (__default__).
+    """Full sequence (__default__).
 
-    TODO: encadear data_prep -> training -> inference -> monitoring -> reporting,
-          respeitando o semáforo entre data_unit_tests e o resto.
+    TODO: chain data_prep -> training -> inference -> monitoring -> reporting,
+          respecting the traffic light between data_unit_tests and the rest.
     """
     raise NotImplementedError
 

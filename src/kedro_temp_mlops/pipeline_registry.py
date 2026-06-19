@@ -1,8 +1,8 @@
 """Project pipelines.
 
-Regista as 11 pipelines individualmente (para correrem isoladas, como o prof quer) e
-compõe sequências nomeadas. NÃO usar find_pipelines() cego — registamos explicitamente
-para controlar a ordem e as composições.
+Registers the 11 pipelines individually (to run in isolation, as the professor requires) and
+composes named sequences. Do NOT use blind find_pipelines() — we register explicitly to
+control order and compositions.
 """
 
 from kedro.pipeline import Pipeline
@@ -21,19 +21,19 @@ from kedro_temp_mlops.pipelines.split_data import create_pipeline as split_data
 
 
 def register_pipelines() -> dict[str, Pipeline]:
-    """Regista as pipelines do projeto e as composições nomeadas.
+    """Register project pipelines and named compositions.
 
     Returns:
-        Mapa nome -> Pipeline.
+        Map name -> Pipeline.
 
     TODO register_pipelines:
-      - composições nomeadas (ver blueprint secção 3):
+      - named compositions (see blueprint section 3):
           * "data_prep" = ingestion + data_unit_tests + preprocessing_train + split_data
           * "training"  = model_selection + model_train + feature_selection
           * "inference" = preprocessing_batch + model_predict
           * "monitoring"= data_drift
-          * __default__ = sequência completa
-      - confirmar a ordem com as dependências do catalog antes de somar.
+          * __default__ = full sequence
+      - confirm order against catalog dependencies before summing.
     """
     p_ingestion = ingestion()
     p_data_unit_tests = data_unit_tests()
@@ -53,7 +53,7 @@ def register_pipelines() -> dict[str, Pipeline]:
     monitoring = p_data_drift
 
     return {
-        # pipelines individuais (correr isoladas)
+        # individual pipelines (run in isolation)
         "ingestion": p_ingestion,
         "data_unit_tests": p_data_unit_tests,
         "preprocessing_train": p_preprocessing_train,
@@ -65,7 +65,7 @@ def register_pipelines() -> dict[str, Pipeline]:
         "model_predict": p_model_predict,
         "data_drift": p_data_drift,
         "reporting": p_reporting,
-        # composições nomeadas
+        # named compositions
         "data_prep": data_prep,
         "training": training,
         "inference": inference,
