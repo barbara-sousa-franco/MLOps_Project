@@ -12,7 +12,8 @@ raw_house_data:
   type: pandas.CSVDataset
   filepath: data/01_raw/portugal_listings.csv
   load_args:
-    low_memory: false        # várias colunas têm tipos mistos (nulls) — evita DtypeWarning
+    low_memory: false
+    encoding: latin-1      
 
 # --- 02_intermediate ----------------------------------------------------------
 ingested_data:
@@ -38,6 +39,14 @@ cleaned_data:
   filepath: data/02_intermediate/cleaned_data.csv
   load_args:
     low_memory: false
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
+ 
+reporting_data_preprocessing:
+  type: json.JSONDataset
+  filepath: data/08_reporting/preprocessing_report.json
 
 # --- 03_primary ---------------------------------------------------------------
 preprocessed_training_data:
@@ -51,18 +60,74 @@ preprocessed_batch_data:
 X_train_data:
   type: pandas.CSVDataset
   filepath: data/03_primary/X_train.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
 
 X_test_data:
   type: pandas.CSVDataset
   filepath: data/03_primary/X_test.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
 
 y_train_data:
   type: pandas.CSVDataset
   filepath: data/03_primary/y_train.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
 
 y_test_data:
   type: pandas.CSVDataset
   filepath: data/03_primary/y_test.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
+
+X_train_imputed:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_train_imputed.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
+
+X_test_imputed:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_test_imputed.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
+
+X_train_processed:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_train_processed.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
+
+X_test_processed:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_test_processed.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
 
 # --- 04_feature ---------------------------------------------------------------
 encoder_transform:              # artifact MLflow (Pickle)
@@ -71,19 +136,25 @@ encoder_transform:              # artifact MLflow (Pickle)
     type: pickle.PickleDataset
     filepath: data/04_feature/encoder.pkl
 
-# --- 05_model_input -----------------------------------------------------------
-X_train:
-  type: pandas.CSVDataset
-  filepath: data/05_model_input/X_train.csv
-X_test:
-  type: pandas.CSVDataset
-  filepath: data/05_model_input/X_test.csv
-y_train:
-  type: pandas.CSVDataset
-  filepath: data/05_model_input/y_train.csv
-y_test:
-  type: pandas.CSVDataset
-  filepath: data/05_model_input/y_test.csv
+num_imputer:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/04_feature/num_imputer.pkl
+
+cat_imputer:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/04_feature/cat_imputer.pkl
+
+capper:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/04_feature/capper.pkl
+
+
 
 # --- 06_models ----------------------------------------------------------------
 best_columns:                   # artifact MLflow (Pickle) — saída do SHAP

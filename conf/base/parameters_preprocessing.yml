@@ -1,38 +1,44 @@
-# Estratégia de imputação, encoding, outliers e feature engineering.
-# Usado por preprocessing_train (fit) E preprocessing_batch (transform).
-
 preprocessing:
-  # --- limpeza / outliers ---
-  # TODO: limites de outliers identificados no EDA (ex: o ~1.38 bilião €, áreas negativas)
-  outliers:
-    Price: { min: 0, max: null }        # TODO: definir teto razoável (winsorize?)
-    GrossArea: { min: 0, max: null }
 
-  # --- imputação de missing ---
-  # TODO: estratégia por tipo de coluna
-  imputation:
-    numeric_strategy: "median"          # median | mean | constant
-    categorical_strategy: "most_frequent"
+  # Target column
+  target_col: Price_log
 
-  # --- feature engineering (utils.py) ---
-  reference_year: 2026                   # property_age = reference_year - ConstructionYear
-  area_bins:                             # bin_area (pd.cut)
-    # TODO: definir limites das faixas a partir do EDA
-    bins: [0, 50, 100, 150, 200, 300, 500]
-    labels: ["<50", "50-100", "100-150", "150-200", "200-300", "300-500"]
-  energy_ordinal_map:                    # energy_to_ordinal
-    "A+": 8
-    A: 7
-    B: 6
-    "B-": 5
-    C: 4
-    D: 3
-    E: 2
-    F: 1
-    G: 0
-    NC: -1                               # TODO: decidir como tratar "NC"/desconhecido
+  # Train/test split
+  test_size: 0.2
+  random_state: 23
 
-  # --- encoding / scaling ---
-  # TODO: escolher encoder (OneHot/Target/Ordinal) e scaler (Standard/MinMax)
-  encoding: "onehot"
-  scaling: "standard"
+  # Impossible value thresholds
+  min_construction_year: 1800
+  max_construction_year: 2026
+
+  # Implausible value thresholds
+  max_bedrooms: 20
+  max_bathrooms: 20
+  max_wc: 20
+  max_total_rooms: 50
+
+  # Imputation strategy
+  numeric_strategy: median
+  categorical_strategy: most_frequent
+
+  # Outlier capping (percentile thresholds, fitted on train only)
+  # Area columns excluded — log1p already compresses extremes
+  # Only count-based columns need capping
+  percentile_thresholds:
+    NumberOfBedrooms:  0.995
+    NumberOfBathrooms: 0.995
+    NumberOfWC:        0.995
+    TotalRooms:        0.990
+
+  # Ordinal encoding for EnergyCertificate (A+ = best, No Rating = worst)
+  energy_ordinal_map:
+    "A+": 9
+    A:    8
+    B:    7
+    "B-": 6
+    C:    5
+    D:    4
+    E:    3
+    F:    2
+    G:    1
+    No Rating: 0
