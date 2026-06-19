@@ -60,11 +60,14 @@ data_unit_tests:
       - Not available
 
   # Asserts críticos que, se falharem, BLOQUEIAM o semáforo (write_traffic_light) — Fase 1 step 5.
+  critical_columns: [Price, ConstructionYear]
   critical_expectations:
     - "Price > 0"
     - "ConstructionYear in [1800, 2026]"
+    
 
   # Semáforo (melhoria vossa) — usado pela pipeline data_unit_tests.
   traffic_light:
     flag_path: "data/08_reporting/PIPELINE_OK.flag"
     fail_flag_path: "data/08_reporting/PIPELINE_FAIL.flag"
+
