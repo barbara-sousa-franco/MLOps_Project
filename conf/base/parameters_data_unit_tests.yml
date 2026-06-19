@@ -12,6 +12,14 @@ data_unit_tests:
     GrossArea: float
     TotalArea: float
     LivingArea: float
+    LotSize: float
+    BuiltArea: float
+    TotalRooms: float
+    NumberOfBedrooms: float
+    NumberOfBathrooms: float
+    NumberOfWC: float
+    Parking: float
+    ConstructionYear: float
 
   # Limites numéricos (ExpectColumnValuesToBeBetween — ignora nulos por defeito).
   # NOTA: as áreas têm NEGATIVOS no raw (GrossArea min −7, TotalArea min −7M, BuiltArea −1)
