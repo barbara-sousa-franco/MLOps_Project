@@ -33,6 +33,12 @@ ana_data:                       # batch a analisar p/ drift / inferência
   load_args:
     low_memory: false
 
+cleaned_data:
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/cleaned_data.csv
+  load_args:
+    low_memory: false
+
 # --- 03_primary ---------------------------------------------------------------
 preprocessed_training_data:
   type: pandas.CSVDataset
@@ -41,6 +47,22 @@ preprocessed_training_data:
 preprocessed_batch_data:
   type: pandas.CSVDataset
   filepath: data/03_primary/preprocessed_batch_data.csv
+
+X_train_data:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_train.csv
+
+X_test_data:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_test.csv
+
+y_train_data:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/y_train.csv
+
+y_test_data:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/y_test.csv
 
 # --- 04_feature ---------------------------------------------------------------
 encoder_transform:              # artifact MLflow (Pickle)
@@ -92,6 +114,18 @@ reporting_tests:                # resultado dos data unit tests (GX)
   type: pandas.CSVDataset
   filepath: data/08_reporting/data_tests.csv
 
+reporting_tests_cleaned:
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/validation_cleaned_data.csv
+
+reporting_tests_model_input:
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/validation_model_input.csv
+
+traffic_light_flag:
+  type: text.TextDataset
+  filepath: data/08_reporting/traffic_light.txt
+
 production_model_metrics:       # artifact MLflow (JSON) — RMSE/MAE/R²
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
@@ -111,6 +145,8 @@ shap_plot:                      # artifact MLflow (Matplotlib)
   dataset:
     type: matplotlib.MatplotlibDataset
     filepath: data/08_reporting/shap_plot.png
+
+
 
 # TODO datasets ainda por mapear (objetos passados entre nós que talvez não precisem
 #      de persistência — podem ficar como MemoryDataset implícito):

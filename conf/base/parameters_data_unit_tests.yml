@@ -1,12 +1,6 @@
-# Regras/limites dos asserts Great Expectations — valores reais confirmados no raw.
-# Config PARTILHADA: usada pela validação efémera da `ingestion` (proteção antes do
-# upload) e pela pipeline `data_unit_tests` (revalidação + semáforo). Nada hard-coded.
-
+# Validation rules for RAW/INGESTED data (existing — do not change)
 data_unit_tests:
   target_col: ${target_col}
-
-  # Tipos esperados (ExpectColumnValuesToBeOfType). "float" casa com float64.
-  # NOTA: ConstructionYear é float64 no raw (tem nulos) — NÃO se exige int.
   column_types:
     Price: float
     GrossArea: float
@@ -20,16 +14,9 @@ data_unit_tests:
     NumberOfWC: float
     Parking: float
     ConstructionYear: float
-
-  # Limites numéricos (ExpectColumnValuesToBeBetween — ignora nulos por defeito).
-  # NOTA: as áreas têm NEGATIVOS no raw (GrossArea min −7, TotalArea min −7M, BuiltArea −1)
-  #       — isso é sujidade tratada no preprocessing, por isso "área >= 0" NÃO entra aqui
-  #       (rebentaria sobre dados crus). Reavaliar como assert PÓS-preprocessing (Fase 1).
   ranges:
-    Price: { min: 0, strict_min: true }        # Price > 0 (min real = 1.0 após drop de nulos)
-    ConstructionYear: { min: 1800, max: 2026 } # real 1900–2025
-
-  # Conjuntos válidos (ExpectColumnDistinctValuesToBeInSet) — valores reais do dataset.
+    Price: { min: 0, strict_min: true }
+    ConstructionYear: { min: 1800, max: 2026 }
   valid_sets:
     Type:
       - Apartment
@@ -66,16 +53,253 @@ data_unit_tests:
       - NC
       - No Certificate
       - Not available
-
-  # Asserts críticos que, se falharem, BLOQUEIAM o semáforo (write_traffic_light) — Fase 1 step 5.
   critical_columns: [Price, ConstructionYear]
   critical_expectations:
     - "Price > 0"
     - "ConstructionYear in [1800, 2026]"
-    
-
-  # Semáforo (melhoria vossa) — usado pela pipeline data_unit_tests.
   traffic_light:
     flag_path: "data/08_reporting/PIPELINE_OK.flag"
     fail_flag_path: "data/08_reporting/PIPELINE_FAIL.flag"
 
+# =============================================================================
+# Validation rules for cleaned_data (post-preprocessing, pre-split)
+# Validates that the preprocessing pipeline ran correctly:
+#   - dropped columns no longer exist
+#   - no negative values in numeric columns
+#   - District does not contain outside-Portugal entries
+#   - categorical columns only contain known valid values
+#   - log-transformed area columns are non-negative
+#   - ordinal-encoded EnergyCertificate is in range [0, 9]
+# =============================================================================
+data_unit_tests_cleaned:
+
+  dropped_columns:
+    - PublishDate
+    - Floor
+    - ConservationStatus
+    - EnergyEfficiencyLevel
+    - City
+    - Town
+
+  row_count:
+    min: 100000
+    max: 135000
+
+  not_null_columns:
+    - Price_log
+    - District
+    - Type
+    - Parking
+    - Elevator
+
+  column_types:
+    Price_log: float64
+    LivingArea_log: float64
+    TotalArea_log: float64
+    GrossArea_log: float64
+    BuiltArea_log: float64
+    LotSize_log: float64
+    Parking: Int64
+    TotalRooms: Int64
+    NumberOfBedrooms: Int64
+    NumberOfBathrooms: Int64
+    NumberOfWC: Int64
+    ConstructionYear: Int64
+    EnergyCertificate: int64
+    Garage: float64
+    Elevator: float64
+    ElectricCarsCharging: float64
+    HasParking: float64
+    District: object
+    Type: object
+
+  ranges:
+    Price_log:
+      min: 0
+      strict_min: true
+    LivingArea_log:
+      min: 0
+    TotalArea_log:
+      min: 0
+    GrossArea_log:
+      min: 0
+    BuiltArea_log:
+      min: 0
+    LotSize_log:
+      min: 0
+    Parking:
+      min: 0
+    TotalRooms:
+      min: 0
+    NumberOfBedrooms:
+      min: 0
+    NumberOfBathrooms:
+      min: 0
+    NumberOfWC:
+      min: 0
+    ConstructionYear:
+      min: 1800
+      max: 2026
+    EnergyCertificate:
+      min: 0
+      max: 9
+    Garage:
+      min: 0
+      max: 1
+    Elevator:
+      min: 0
+      max: 1
+    ElectricCarsCharging:
+      min: 0
+      max: 1
+    HasParking:
+      min: 0
+      max: 1
+
+  valid_sets:
+    District:
+      - Aveiro
+      - Beja
+      - Braga
+      - Bragança
+      - Castelo Branco
+      - Coimbra
+      - Évora
+      - Faro
+      - Guarda
+      - Ilha da Madeira
+      - Ilha das Flores
+      - Ilha de Porto Santo
+      - Ilha de Santa Maria
+      - Ilha de São Miguel
+      - Ilha do Faial
+      - Ilha Terceira
+      - Leiria
+      - Lisboa
+      - Portalegre
+      - Porto
+      - Santarém
+      - Setúbal
+      - Viana do Castelo
+      - Vila Real
+      - Viseu
+    Type:
+      - Apartment
+      - Building
+      - Duplex
+      - Estate
+      - Farm
+      - Garage
+      - Hotel
+      - House
+      - Industrial
+      - Investment
+      - Land
+      - Manor
+      - Mansion
+      - Office
+      - Other - Commercial
+      - Other - Residential
+      - Storage
+      - Store
+      - Studio
+      - Transfer of lease
+      - Warehouse
+
+  critical_columns:
+    - Price_log
+    - District
+    - Type
+
+  hard_fail: false
+
+  traffic_light:
+    flag_path: data/08_reporting/PIPELINE_OK.flag
+    fail_flag_path: data/08_reporting/PIPELINE_FAIL.flag
+
+# =============================================================================
+# Validation rules for X_train (post-pipeline, ready for modelling)
+# Validates that:
+#   - no missing values remain in any column
+#   - all columns are numeric (float64)
+#   - numeric ranges are within expected bounds after imputation and capping
+#   - row count is consistent with the 80/20 train/test split
+# =============================================================================
+data_unit_tests_model_input:
+
+  model_input_columns:
+    - EnergyCertificate
+    - GrossArea_log
+    - TotalArea_log
+    - Parking
+    - HasParking
+    - ConstructionYear
+    - Garage
+    - Elevator
+    - ElectricCarsCharging
+    - TotalRooms
+    - NumberOfBedrooms
+    - NumberOfWC
+    - LivingArea_log
+    - LotSize_log
+    - BuiltArea_log
+    - NumberOfBathrooms
+
+  column_types:
+    EnergyCertificate: float64
+    GrossArea_log: float64
+    TotalArea_log: float64
+    Parking: float64
+    HasParking: float64
+    ConstructionYear: float64
+    Garage: float64
+    Elevator: float64
+    ElectricCarsCharging: float64
+    TotalRooms: float64
+    NumberOfBedrooms: float64
+    NumberOfWC: float64
+    LivingArea_log: float64
+    LotSize_log: float64
+    BuiltArea_log: float64
+    NumberOfBathrooms: float64
+
+  model_input_row_count:
+    min: 80000
+    max: 110000
+
+  model_input_ranges:
+    EnergyCertificate:
+      min: 0
+      max: 9
+    Parking:
+      min: 0
+    HasParking:
+      min: 0
+      max: 1
+    Garage:
+      min: 0
+      max: 1
+    Elevator:
+      min: 0
+      max: 1
+    ElectricCarsCharging:
+      min: 0
+      max: 1
+    NumberOfBedrooms:
+      min: 0
+    NumberOfBathrooms:
+      min: 0
+    NumberOfWC:
+      min: 0
+    TotalRooms:
+      min: 0
+    LivingArea_log:
+      min: 0
+    TotalArea_log:
+      min: 0
+    GrossArea_log:
+      min: 0
+    BuiltArea_log:
+      min: 0
+    LotSize_log:
+      min: 0
