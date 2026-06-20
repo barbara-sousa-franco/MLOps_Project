@@ -79,13 +79,11 @@ def build_cleaned_data_suite(parameters: dict) -> gx.ExpectationSuite:
     """
     expectations = []
 
-    # Dropped columns must not exist 
-    for col in parameters["dropped_columns"]:
-        expectations.append(
-            gxe.ExpectColumnToNotExist(column=col)
-        )
+    # NOTE: the "dropped columns must not exist" check is NOT done here — GX 1.x has no
+    # ExpectColumnToNotExist. It is done in Python in `unit_test_cleaned_data`
+    # (see _check_dropped_columns), which returns rows in the same report format.
 
-    # Row count 
+    # Row count
     expectations.append(
         gxe.ExpectTableRowCountToBeBetween(
             min_value=parameters["row_count"]["min"],
@@ -100,7 +98,7 @@ def build_cleaned_data_suite(parameters: dict) -> gx.ExpectationSuite:
         )
 
     #  Column types
-    for col, dtype in parameters["column_types_cleaned"].items():
+    for col, dtype in parameters["column_types"].items():
         expectations.append(
             gxe.ExpectColumnValuesToBeOfType(column=col, type_=dtype)
         )
@@ -149,8 +147,8 @@ def build_model_input_suite(parameters: dict) -> gx.ExpectationSuite:
             gxe.ExpectColumnValuesToNotBeNull(column=col)
         )
 
-    # Column types 
-    for col, dtype in parameters["column_types_model_input"].items():
+    # Column types
+    for col, dtype in parameters["column_types"].items():
         expectations.append(
             gxe.ExpectColumnValuesToBeOfType(column=col, type_=dtype)
         )
@@ -254,6 +252,25 @@ def _run_validation(
     return get_validation_results(results)
 
 
+def _check_dropped_columns(df: pd.DataFrame, dropped_columns: list) -> pd.DataFrame:
+    """Check in Python that the dropped columns do not exist (GX 1.x lacks this expectation).
+
+    Returns a DataFrame in the same format as `get_validation_results` (one row per column).
+    """
+    rows = []
+    for col in dropped_columns:
+        present = col in df.columns
+        rows.append({
+            "Success": not present,
+            "Expectation Type": "expect_column_to_not_exist",
+            "Column": col,
+            "Min Value": "", "Max Value": "", "Value Set": "",
+            "Element Count": "", "Unexpected Count": "", "Unexpected Percent": "",
+            "Observed Value": "present" if present else "absent",
+        })
+    return pd.DataFrame(rows)
+
+
 def unit_test_cleaned_data(
     cleaned_data: pd.DataFrame,
     parameters: dict,
@@ -263,6 +280,11 @@ def unit_test_cleaned_data(
 
     suite = build_cleaned_data_suite(parameters)
     df_validation = _run_validation(cleaned_data, suite, "cleaned_data")
+
+    # Python check for dropped columns (replaces ExpectColumnToNotExist)
+    dropped = _check_dropped_columns(cleaned_data, parameters.get("dropped_columns", []))
+    if not dropped.empty:
+        df_validation = pd.concat([dropped, df_validation], ignore_index=True)
 
     n_failed = int((~df_validation["Success"].astype(bool)).sum())
     if n_failed:

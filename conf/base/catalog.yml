@@ -1,11 +1,11 @@
-# Data Catalog — caso das casas (portugal_listings).
-# Convenção: tudo o que deve ir para o MLflow usa MlflowArtifactDataset (truque do prof).
+# Data Catalog — house-price case (portugal_listings).
+# Convention: anything that should go to MLflow uses MlflowArtifactDataset.
 # Docs: https://docs.kedro.org/en/stable/data/data_catalog.html
 #
-# TODO geral:
-#   - confirmar os tipos (CSV/Pickle/JSON/Matplotlib) e versionamento
-#   - os datasets vindos da feature store (ingested_data/ref_data/ana_data) podem ser
-#     materializados em CSV local para quem não tiver Hopsworks key (ver risks no relatório)
+# General TODO:
+#   - confirm the types (CSV/Pickle/JSON/Matplotlib) and versioning
+#   - datasets coming from the feature store (ingested_data/ref_data/ana_data) can be
+#     materialized as local CSVs for those without a Hopsworks key (see risks in the report)
 
 # --- 01_raw -------------------------------------------------------------------
 raw_house_data:
@@ -20,15 +20,15 @@ ingested_data:
   type: pandas.CSVDataset
   filepath: data/02_intermediate/ingested_data.csv
   load_args:
-    low_memory: false           # tipos mistos (nulls elevados) -> evita DtypeWarning
+    low_memory: false           # mixed types (many nulls) -> avoids DtypeWarning
 
-ref_data:                       # referência p/ drift (distribuição de treino)
+ref_data:                       # reference for drift (training distribution)
   type: pandas.CSVDataset
   filepath: data/02_intermediate/ref_data.csv
   load_args:
     low_memory: false
 
-ana_data:                       # batch a analisar p/ drift / inferência
+ana_data:                       # batch to analyse for drift / inference
   type: pandas.CSVDataset
   filepath: data/02_intermediate/ana_data.csv
   load_args:
@@ -129,8 +129,27 @@ X_test_processed:
     index: false
     encoding: latin-1
 
+# FINAL features (post feature_engineering) that enter modelling
+X_train_encoded:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_train_encoded.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
+
+X_test_encoded:
+  type: pandas.CSVDataset
+  filepath: data/03_primary/X_test_encoded.csv
+  load_args:
+    encoding: latin-1
+  save_args:
+    index: false
+    encoding: latin-1
+
 # --- 04_feature ---------------------------------------------------------------
-encoder_transform:              # artifact MLflow (Pickle)
+encoder_transform:              # MLflow artifact (Pickle)
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: pickle.PickleDataset
@@ -154,22 +173,32 @@ capper:
     type: pickle.PickleDataset
     filepath: data/04_feature/capper.pkl
 
-
+target_encoder:                 # MLflow artifact (Pickle) — fit on train (anti-leakage)
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/04_feature/target_encoder.pkl
 
 # --- 06_models ----------------------------------------------------------------
-best_columns:                   # artifact MLflow (Pickle) — saída do SHAP
+all_columns:                    # post-split column list (split_train output)
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/06_models/all_columns.pkl
+
+best_columns:                   # MLflow artifact (Pickle) — SHAP output
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: pickle.PickleDataset
     filepath: data/06_models/best_cols.pkl
 
-production_columns:             # artifact MLflow (Pickle)
+production_columns:             # MLflow artifact (Pickle)
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: pickle.PickleDataset
     filepath: data/06_models/production_cols.pkl
 
-production_model:               # artifact MLflow (Pickle) — o champion
+production_model:               # MLflow artifact (Pickle) — the champion
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: pickle.PickleDataset
@@ -181,7 +210,7 @@ predictions:
   filepath: data/07_model_output/predictions.csv
 
 # --- 08_reporting -------------------------------------------------------------
-reporting_tests:                # resultado dos data unit tests (GX)
+reporting_tests:                # data unit test results (GX)
   type: pandas.CSVDataset
   filepath: data/08_reporting/data_tests.csv
 
@@ -197,7 +226,7 @@ traffic_light_flag:
   type: text.TextDataset
   filepath: data/08_reporting/traffic_light.txt
 
-production_model_metrics:       # artifact MLflow (JSON) — RMSE/MAE/R²
+production_model_metrics:       # MLflow artifact (JSON) — RMSE/MAE/R²
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: json.JSONDataset
@@ -207,11 +236,11 @@ drift_result:
   type: pandas.CSVDataset
   filepath: data/08_reporting/drift_result.csv
 
-drift_report:                   # HTML do nannyml/evidently
+drift_report:                   # HTML from nannyml/evidently
   type: text.TextDataset
   filepath: data/08_reporting/data_drift_report.html
 
-shap_plot:                      # artifact MLflow (Matplotlib)
+shap_plot:                      # MLflow artifact (Matplotlib)
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: matplotlib.MatplotlibDataset
@@ -219,8 +248,8 @@ shap_plot:                      # artifact MLflow (Matplotlib)
 
 
 
-# TODO datasets ainda por mapear (objetos passados entre nós que talvez não precisem
-#      de persistência — podem ficar como MemoryDataset implícito):
+# TODO datasets still to map (objects passed between nodes that may not need
+#      persistence — can stay as an implicit MemoryDataset):
 #   - clean_training_data, all_columns, champion_model, registered_model_version,
 #     shap_values, traffic_light_flag, final_report
-#   Decidir quais persistir (CSV/Pickle) vs deixar em memória.
+#   Decide which to persist (CSV/Pickle) vs keep in memory.

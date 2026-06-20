@@ -6,7 +6,7 @@ from .nodes import model_train, register_model
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Cria a pipeline de treino do champion + registo no Model Registry.
+    """Create the champion training pipeline + Model Registry registration.
 
     outputs: `production_model`, `production_columns`, `production_model_metrics`.
     """
@@ -14,14 +14,14 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=model_train,
-                # `best_columns` é opcional e NÃO é cabeado no 1º passe (evita ciclo com
-                # feature_selection). 2º passe: adicionar "best_columns" aqui + pôr
-                # use_feature_selection=true em parameters_model_train.yml.
+                # `best_columns` is optional and NOT wired on the 1st pass (avoids a cycle
+                # with feature_selection). 2nd pass: add "best_columns" here + set
+                # use_feature_selection=true in parameters_model_train.yml.
                 inputs=[
-                    "X_train",
-                    "X_test",
-                    "y_train",
-                    "y_test",
+                    "X_train_encoded",
+                    "X_test_encoded",
+                    "y_train_data",
+                    "y_test_data",
                     "params:model_train",
                     "selected_model",
                 ],

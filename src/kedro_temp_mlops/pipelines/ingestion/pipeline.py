@@ -2,17 +2,19 @@
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import ingestion, split_reference_analysis
+from .nodes import ingestion
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Cria a pipeline de ingestão.
+    """Create the ingestion pipeline.
 
     Node(ingestion) -> `ingested_data`
-    Node(split_reference_analysis) -> `ref_data`, `ana_data`
 
-    TODO (Fase 5): quando o upload à feature store estiver pronto, re-adicionar o input
-    "credentials" ao nó de ingestion e/ou um Node(read_from_feature_store).
+    NOTE: the ref/ana split does NOT live here — it is done in the `split_data` pipeline
+    (split_out_of_sample), which also supports the 'biased' strategy for the drift demo.
+
+    TODO (Phase 5): once the feature-store upload is ready, re-add the "credentials" input
+    to the ingestion node and/or a Node(read_from_feature_store).
     """
     return pipeline(
         [
@@ -21,12 +23,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["raw_house_data", "params:ingestion", "params:data_unit_tests"],
                 outputs="ingested_data",
                 name="ingestion_node",
-            ),
-            node(
-                func=split_reference_analysis,
-                inputs=["ingested_data", "params:ingestion"],
-                outputs=["ref_data", "ana_data"],
-                name="split_reference_analysis_node",
             ),
         ]
     )

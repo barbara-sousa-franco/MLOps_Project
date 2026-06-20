@@ -239,41 +239,9 @@ def ingestion(df_raw: pd.DataFrame, parameters: dict, validation_params: dict) -
     return df
 
 
-def split_reference_analysis(ingested_data: pd.DataFrame, parameters: dict):
-    """Split the ingested dataset into reference (baseline) and analysis batch.
-
-    `ref_data` represents the reference distribution (training) and `ana_data` the
-    "new batch" that feeds drift detection and inference.
-
-    NOTE: `PublishDate` is ~78% null, so a TEMPORAL split is not feasible — a reproducible
-    RANDOM split is used instead (by `seed`). See ASSUMPTIONS.md.
-
-    Args:
-        ingested_data: output of `ingestion`.
-        parameters: uses `reference_fraction` (fraction for reference) and `seed`.
-
-    Returns:
-        Tuple (ref_data, ana_data).
-
-    TODO (extra creativity, Phase 3): inject artificial drift into `ana_data` to
-    demonstrate drift detection (professor's suggestion).
-    """
-    ref_fraction = parameters.get("reference_fraction", 0.8)
-    seed = parameters["seed"]
-
-    ref_data = ingested_data.sample(frac=ref_fraction, random_state=seed)
-    ana_data = ingested_data.drop(index=ref_data.index)
-
-    ref_data = ref_data.reset_index(drop=True)
-    ana_data = ana_data.reset_index(drop=True)
-    logger.info(
-        "Split ref/ana: ref_data=%d rows, ana_data=%d rows (frac=%.2f, seed=%d).",
-        len(ref_data),
-        len(ana_data),
-        ref_fraction,
-        seed,
-    )
-    return ref_data, ana_data
+# NOTE: the ref/ana split was moved to the `split_data` pipeline (split_out_of_sample),
+# which is the canonical version (supports the 'biased' strategy for the drift demo). The old
+# `split_reference_analysis` was removed from here to eliminate the duplication.
 
 
 def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame:
