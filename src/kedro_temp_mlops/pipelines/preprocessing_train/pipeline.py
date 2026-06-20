@@ -1,28 +1,16 @@
-"""Pipeline `preprocessing_train`."""
+"""Pipeline `preprocessing_train` — pre-split cleaning only."""
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import clean_data, encode_features
+from .nodes import clean_data
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Cria a pipeline de preprocessing do treino.
-
-    outputs: `preprocessed_training_data`, `encoder_transform`.
-    """
-    return pipeline(
-        [
-            node(
-                func=clean_data,
-                inputs=["ingested_data", "params:preprocessing"],
-                outputs="clean_training_data",
-                name="clean_data_node",
-            ),
-            node(
-                func=encode_features,
-                inputs=["clean_training_data", "params:preprocessing"],
-                outputs=["preprocessed_training_data", "encoder_transform"],
-                name="encode_features_node",
-            ),
-        ]
-    )
+    return pipeline([
+        node(
+            func=clean_data,
+            inputs=["ref_data", "params:preprocessing"],
+            outputs=["cleaned_data", "reporting_data_preprocessing"],
+            name="clean_data",
+        ),
+    ])

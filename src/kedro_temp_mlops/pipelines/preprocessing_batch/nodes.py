@@ -1,32 +1,34 @@
-"""Nodes for the `preprocessing_batch` pipeline.
-
-Reuses the `encoder_transform` from training: applies `transform` (NEVER `fit`) to the
-new batch. Output feeds drift detection and prediction.
+"""Replays the SAME cleaning as training (no refit), then applies the
+train-fitted imputers, capper and target encoder via transform only.
+Defaults to inference (no target); `batch_has_target` opts into a labelled batch.
 """
 
 import logging
+from typing import Any, Dict
 
 import pandas as pd
+
+from ..preprocessing_train.nodes import clean_data  # single source of truth
 
 logger = logging.getLogger(__name__)
 
 
-def preprocess_batch(ana_data: pd.DataFrame, encoder, parameters: dict) -> pd.DataFrame:
-    """Pre-process a new batch using the already-fitted encoder.
+def preprocess_batch(ana_data, num_imputer, cat_imputer, capper, target_encoder, parameters):
+    has_target = parameters.get("batch_has_target", False)
 
-    Args:
-        ana_data: new batch to analyse (02_intermediate/ana_data.csv).
-        encoder: `encoder_transform` fitted during training.
-        parameters: same cleaning/encoding config as training (parameters_preprocessing.yml).
+    df, _ = clean_data(ana_data, parameters,
+                       has_target=has_target, drop_missing_target=False)
 
-    Returns:
-        preprocessed_batch_data — ready for drift detection and inference.
+    num_cols = list(num_imputer.feature_names_in_)
+    df[num_cols] = num_imputer.transform(df[num_cols])
+    if cat_imputer is not None:
+        cat_cols = list(cat_imputer.feature_names_in_)
+        df[cat_cols] = cat_imputer.transform(df[cat_cols])
 
-    TODO preprocess_batch:
-      - apply the SAME cleaning/FE as training (no refit)
-      - encoder.transform(...) — NOT encoder.fit(...)  (anti-leakage)
-      - do NOT apply log1p to target if the batch has no target (inference)
-      - output preprocessed_batch_data
-    """
-    # TODO: implement
-    raise NotImplementedError
+    df = capper.transform(df)
+
+    enc_cols = list(target_encoder.feature_names_in_)
+    df[enc_cols] = target_encoder.transform(df[enc_cols])
+
+    logger.info("Preprocessed batch shape: %s", df.shape)
+    return df

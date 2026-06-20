@@ -2,18 +2,22 @@
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import split_data
+from .nodes import split_out_of_sample
+
+
+"""Pipeline `split_data` — out-of-sample (ref/ana) carve-off."""
+
+from kedro.pipeline import Pipeline, node, pipeline
+
+from .nodes import split_out_of_sample
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Cria a pipeline de split. outputs: X_train, X_test, y_train, y_test, columns."""
-    return pipeline(
-        [
-            node(
-                func=split_data,
-                inputs=["preprocessed_training_data", "params:split"],
-                outputs=["X_train", "X_test", "y_train", "y_test", "all_columns"],
-                name="split_data_node",
-            ),
-        ]
-    )
+    return pipeline([
+        node(
+            func=split_out_of_sample,
+            inputs=["ingested_data", "params:split_data"],
+            outputs=["ref_data", "ana_data"],
+            name="split_out_of_sample_node",
+        ),
+    ])

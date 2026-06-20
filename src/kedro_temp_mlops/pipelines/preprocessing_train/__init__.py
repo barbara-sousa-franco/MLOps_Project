@@ -1,7 +1,4 @@
-"""Preprocessing (treino): limpeza + feature engineering + encoding. Guarda encoder.pkl.
-
-ANTI-LEAKAGE: o encoder/scaler é `fit` SÓ aqui (treino). O batch faz só `transform`.
-"""
+"""Preprocessing pipeline."""
 
 from .pipeline import create_pipeline
 

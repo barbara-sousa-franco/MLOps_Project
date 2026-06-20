@@ -1,36 +1,42 @@
-"""Nodes for the `split_data` pipeline.
-
-WARNING — BUG IN THE EXAMPLE NOT TO COPY: `stratify=y` only works for classification;
-it breaks for regression. See TODO below.
+"""Carves the out-of-sample batch (`ana_data`) off the full ingested data,
+BEFORE any cleaning. `ref_data` is the training pool; `ana_data` is the
+held-out batch that later flows through `preprocessing_batch`.
 """
 
 import logging
+from typing import Any, Dict, Tuple
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 
-def split_data(preprocessed_training_data: pd.DataFrame, parameters: dict):
-    """Separate features/target and perform a train/test split (regression).
+def split_out_of_sample(
+    ingested_data: pd.DataFrame,
+    parameters: Dict[str, Any],
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """ref_data = training pool, ana_data = out-of-sample batch.
 
-    Args:
-        preprocessed_training_data: output of `preprocessing_train`.
-        parameters: test_size, seed, strategy (parameters_split.yml).
-
-    Returns:
-        Tuple (X_train, X_test, y_train, y_test, columns):
-          - columns: X_train.columns (maps to best_columns in catalog, as in the example).
-
-    TODO split_data:
-      - assert no nulls (as in the example)
-      - separate target (Price) from features; drop the "index" column
-      - train_test_split with seed and test_size from parameters
-      - WARNING: do NOT use stratify=y (bug in the example — only works for classification).
-        Regression: either no stratify, OR create Price bins (pd.qcut) and stratify by
-        bin to ensure the test set covers the full price range (recommended).
-      - also return X_train.columns
-      - test set is sacred: do not touch until final evaluation
+    strategy='random' -> ana_data ~ same distribution as ref_data (drift baseline).
+    strategy='biased' -> ana_data oversamples one district (drift demo).
     """
-    # TODO: implement
-    raise NotImplementedError
+    strategy = parameters.get("strategy", "random")
+    seed = parameters["random_state"]
+    ref_frac = parameters["ref_frac"]
+
+    ref_data = ingested_data.sample(frac=ref_frac, random_state=seed)
+    remaining = ingested_data.drop(ref_data.index)
+
+    if strategy == "biased":
+        col = parameters.get("bias_column", "District")
+        district = parameters["bias_district"]
+        ana_data = remaining[remaining[col] == district]
+        if ana_data.empty:
+            logger.warning("No rows for %s=%s — falling back to random ana_data", col, district)
+            ana_data = remaining
+    else:
+        ana_data = remaining
+
+    logger.info("strategy=%s | ref_data=%s, ana_data=%s",
+                strategy, ref_data.shape, ana_data.shape)
+    return ref_data, ana_data

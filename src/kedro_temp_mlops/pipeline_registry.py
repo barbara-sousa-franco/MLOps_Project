@@ -9,7 +9,7 @@ from kedro_temp_mlops.pipelines.ingestion import create_pipeline as ingestion
 from kedro_temp_mlops.pipelines.model_predict import create_pipeline as model_predict
 from kedro_temp_mlops.pipelines.model_selection import create_pipeline as model_selection
 from kedro_temp_mlops.pipelines.model_train import create_pipeline as model_train
-from kedro_temp_mlops.pipelines.preprocessing import create_pipeline as preprocessing
+from kedro_temp_mlops.pipelines.preprocessing_train import create_pipeline as preprocessing
 
 
 def register_pipelines() -> dict[str, Pipeline]:
