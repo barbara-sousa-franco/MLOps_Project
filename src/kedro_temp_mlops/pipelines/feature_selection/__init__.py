@@ -1,7 +1,7 @@
-"""Feature selection via SHAP do champion -> best_cols.pkl.
+"""Feature selection via SHAP of the champion -> best_cols.pkl.
 
-Corre DEPOIS de model_train (precisa do champion treinado). best_cols volta a alimentar
-um retreino via flag `use_feature_selection` no model_train (opção A do blueprint).
+Runs AFTER model_train (needs the trained champion). best_cols feeds back into a retrain
+via the `use_feature_selection` flag in model_train (blueprint option A).
 """
 
 from .pipeline import create_pipeline

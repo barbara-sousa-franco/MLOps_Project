@@ -1,6 +1,6 @@
-"""Data unit tests pipeline: asserts de qualidade (Great Expectations) + ESCREVE SEMÁFORO.
+"""Data unit tests pipeline: quality asserts (Great Expectations) + WRITES THE TRAFFIC LIGHT.
 
-NÃO confundir com a pasta `tests/` (pytest). Aqui testa-se a QUALIDADE DOS DADOS.
+Do NOT confuse with the `tests/` folder (pytest). This validates DATA QUALITY.
 """
 
 from .pipeline import create_pipeline

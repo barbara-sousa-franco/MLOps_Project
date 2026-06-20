@@ -1,4 +1,4 @@
-"""Ingestion pipeline: raw -> (Great Expectations efémero) -> feature store -> ler de volta."""
+"""Ingestion pipeline: raw -> (ephemeral Great Expectations) -> feature store -> read back."""
 
 from .pipeline import create_pipeline
 

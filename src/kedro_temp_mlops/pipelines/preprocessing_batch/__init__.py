@@ -1,4 +1,4 @@
-"""Preprocessing (batch novo): aplica o MESMO encoder do treino (transform, sem refit)."""
+"""Preprocessing (new batch): applies the SAME train encoder (transform, no refit)."""
 
 from .pipeline import create_pipeline
 

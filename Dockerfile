@@ -1,29 +1,29 @@
-# Containerização do projeto MLOps.
+# Containerization of the MLOps project.
 # TODO Dockerfile:
-#   - escolher base slim e fixar versão de Python (projeto usa >=3.13)
-#   - instalar deps a partir do requirements.txt (versões pinadas)
-#   - ENTRYPOINT que corre `kedro run` (ou serve o Prefect)
+#   - choose a slim base and pin the Python version (project uses >=3.13)
+#   - install deps from requirements.txt (pinned versions)
+#   - ENTRYPOINT that runs `kedro run` (or serves Prefect)
 
 FROM python:3.13-slim
 
-# Evita .pyc e força stdout/stderr sem buffer (logs visíveis no container)
+# Avoid .pyc and force unbuffered stdout/stderr (logs visible in the container)
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# TODO: instalar dependências de sistema se necessário (ex: build-essential p/ libs C)
+# TODO: install system dependencies if needed (e.g. build-essential for C libs)
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar o projeto
+# Copy the project
 COPY . .
 
-# Instalar o package Kedro (src layout)
+# Install the Kedro package (src layout)
 RUN pip install --no-cache-dir -e .
 
-# TODO: definir o comando default.
-#   Opção A (Kedro):   ENTRYPOINT ["kedro", "run"]
-#   Opção B (Prefect): ENTRYPOINT ["python", "deployment_prefect.py"]
+# TODO: define the default command.
+#   Option A (Kedro):   ENTRYPOINT ["kedro", "run"]
+#   Option B (Prefect): ENTRYPOINT ["python", "deployment_prefect.py"]
 ENTRYPOINT ["kedro", "run"]
 CMD ["--pipeline", "__default__"]

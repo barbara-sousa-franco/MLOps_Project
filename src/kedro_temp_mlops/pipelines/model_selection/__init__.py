@@ -1,4 +1,4 @@
-"""Model selection: challengers (vários modelos) + tuning com Optuna. Escolhe o melhor."""
+"""Model selection: challengers (several models) + Optuna tuning. Picks the best."""
 
 from .pipeline import create_pipeline
 

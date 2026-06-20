@@ -6,7 +6,7 @@ from .nodes import predict
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Cria a pipeline de inferência. outputs: `predictions`."""
+    """Create the inference pipeline. outputs: `predictions`."""
     return pipeline(
         [
             node(

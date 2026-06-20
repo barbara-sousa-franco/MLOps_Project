@@ -1,12 +1,12 @@
-# Parâmetros GLOBAIS — lidos por TODOS os nós, nunca inline (convenção do blueprint).
-# Parâmetros específicos de cada pipeline vivem nos parameters_*.yml.
+# GLOBAL parameters — read by ALL nodes, never inline (blueprint convention).
+# Pipeline-specific parameters live in parameters_*.yml.
 
 # TODO parameters.yml:
-seed: 42                     # random_state lido por todos os nós
+seed: 42                     # random_state read by all nodes
 target_col: "Price"
-use_log_target: true         # testar log1p — EDA mostra skew forte; documentar em ASSUMPTIONS.md
+use_log_target: true         # test log1p — EDA shows strong skew; document in ASSUMPTIONS.md
 
-# Lista de colunas esperadas no raw (validada na ingestion/data_unit_tests)
+# Expected raw columns (validated in ingestion/data_unit_tests)
 raw_columns:
   - Price
   - District
@@ -34,7 +34,7 @@ raw_columns:
   - BuiltArea
   - NumberOfBathrooms
 
-# TODO: rever a partilha numérica/categórica com base no EDA
+# TODO: review the numeric/categorical split based on EDA
 numeric_features:
   - GrossArea
   - TotalArea
@@ -64,25 +64,25 @@ categorical_features:
 
 # --- ingestion ---------------------------------------------------------------
 ingestion:
-  target_col: ${target_col}      # interpolação OmegaConf do valor global
+  target_col: ${target_col}      # OmegaConf interpolation of the global value
   seed: ${seed}
   primary_key: "index"
-  run_validation: true           # validação GX efémera antes do upload (raise se falhar)
-  reference_fraction: 0.8        # fração para ref_data; o resto vai para ana_data (batch)
-  event_time: "PublishDate"      # NOTA: ~78% nulos -> usado só na FS (Fase 5), não no split
+  run_validation: true           # ephemeral GX validation before upload (raise on failure)
+  reference_fraction: 0.8        # fraction for ref_data; the rest goes to ana_data (batch)
+  event_time: "PublishDate"      # NOTE: ~78% null -> used only in the FS (Phase 5), not in the split
   feature_group_version: 1
-  # TODO: correr o upload à feature store só se True (assim quem não tem Hopsworks key
-  #       corre o resto da pipeline a partir dos CSVs locais).
+  # TODO: run the feature-store upload only if True (so whoever lacks a Hopsworks key
+  #       runs the rest of the pipeline from local CSVs).
   to_feature_store: false
 
 # --- data_drift --------------------------------------------------------------
 data_drift:
-  # TODO: motor de drift e config
-  engine: "evidently"          # ou "nannyml"
-  # features_to_monitor: [...]  # subset a monitorizar (default: numeric_features)
-  # inject_artificial_drift: false  # extra: injetar drift p/ demonstrar deteção
+  # TODO: drift engine and config
+  engine: "evidently"          # or "nannyml"
+  # features_to_monitor: [...]  # subset to monitor (default: numeric_features)
+  # inject_artificial_drift: false  # extra: inject drift to demonstrate detection
 
 # --- reporting ---------------------------------------------------------------
 reporting:
-  # TODO: config do relatório consolidado
+  # TODO: consolidated report config
   report_path: "data/08_reporting"

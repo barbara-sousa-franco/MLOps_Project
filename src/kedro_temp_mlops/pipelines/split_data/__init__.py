@@ -1,4 +1,6 @@
-"""Split data: train/test split. O test set é sagrado — não tocar até avaliação final."""
+"""Split data: carves the out-of-sample batch (ana_data) off the ingested data.
+
+ref_data is the training pool; ana_data is the held-out batch for drift/inference."""
 
 from .pipeline import create_pipeline
 

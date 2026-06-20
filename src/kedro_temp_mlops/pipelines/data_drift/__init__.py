@@ -1,4 +1,4 @@
-"""Data drift: compara batch novo (analysis) vs referência (treino). nannyml/evidently."""
+"""Data drift: compares a new batch (analysis) vs the reference (training). nannyml/evidently."""
 
 from .pipeline import create_pipeline
 

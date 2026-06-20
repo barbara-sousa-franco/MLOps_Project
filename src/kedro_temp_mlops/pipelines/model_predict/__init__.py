@@ -1,4 +1,4 @@
-"""Model predict: inferência com o champion + best_cols sobre o batch novo."""
+"""Model predict: inference with the champion + best_cols on the new batch."""
 
 from .pipeline import create_pipeline
 

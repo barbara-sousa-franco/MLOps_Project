@@ -1,4 +1,4 @@
-"""Reporting: consolida métricas + SHAP + drift + data tests para o relatório."""
+"""Reporting: consolidates metrics + SHAP + drift + data tests for the report."""
 
 from .pipeline import create_pipeline
 

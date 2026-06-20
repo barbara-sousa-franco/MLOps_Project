@@ -35,7 +35,7 @@ tracking:
     pipelines: []
 
   experiment:
-    # TODO (blueprint): nome do experimento do caso das casas
+    # TODO (blueprint): experiment name for the house-price case
     name: house_price_prediction
     create_experiment_kwargs: # will be used only if the experiment does not exist yet and is created.
       artifact_location: null # enable to specify an artifact location for the experiment different than the global one for the mlflow server
