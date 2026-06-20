@@ -4,7 +4,8 @@ model_selection:
   metric: "rmse"             # rmse | mae | r2
   direction: "minimize"      # ⚠️ lower RMSE is better -> minimize
   n_trials: 30               # TODO: more trials = better model but slower (trade-off in the report)
-  cv_folds: 3
+  random_state: 42
+  val_size: 0.2              # internal train/validation holdout (keeps X_test untouched during search)
 
   # STEP 1 — challengers: model types to compare
   candidates:

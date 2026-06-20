@@ -180,6 +180,12 @@ target_encoder:                 # MLflow artifact (Pickle) — fit on train (ant
     filepath: data/04_feature/target_encoder.pkl
 
 # --- 06_models ----------------------------------------------------------------
+selected_model:                 # MLflow artifact (Pickle) — best model from model_selection
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: pickle.PickleDataset
+    filepath: data/06_models/selected_model.pkl
+
 all_columns:                    # post-split column list (split_train output)
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
