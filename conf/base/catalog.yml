@@ -252,7 +252,33 @@ shap_plot:                      # MLflow artifact (Matplotlib)
     type: matplotlib.MatplotlibDataset
     filepath: data/08_reporting/shap_plot.png
 
+shap_values:
+  type: pickle.PickleDataset
+  filepath: data/08_reporting/shap_values.pkl
 
+best_columns:
+  type: pickle.PickleDataset
+  filepath: data/04_feature/best_columns.pkl
+challenger_model:
+  type: pickle.PickleDataset
+  filepath: data/06_models/challenger_model.pkl
+challenger_params:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: json.JSONDataset
+    filepath: data/06_models/challenger_params.json
+promoted_model:
+  type: kedro_mlflow.io.models.MlflowModelTrackingDataset
+  flavor: mlflow.sklearn
+  save_args:
+    artifact_path: promoted_model
+champion_challenger_report:
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: json.JSONDataset
+    filepath: data/08_reporting/champion_challenger_report.json
+champion_challenger_metrics:
+  type: kedro_mlflow.io.metrics.MlflowMetricsHistoryDataset
 
 # TODO datasets still to map (objects passed between nodes that may not need
 #      persistence — can stay as an implicit MemoryDataset):

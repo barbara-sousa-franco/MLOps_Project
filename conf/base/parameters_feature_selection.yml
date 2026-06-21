@@ -1,0 +1,8 @@
+feature_selection:
+  random_state: 42
+  shap:
+    top_n: 15
+    threshold: null      # set a float to use a cutoff instead of top_n
+  challenger:
+    n_trials: 30
+    cv: 3

@@ -9,7 +9,7 @@ from kedro.pipeline import Pipeline
 
 from kedro_temp_mlops.pipelines.data_drift import create_pipeline as data_drift
 from kedro_temp_mlops.pipelines.data_unit_tests import create_pipeline as data_unit_tests
-from kedro_temp_mlops.pipelines.feature_engineering import create_pipeline as feature_engineering
+from kedro_temp_mlops.pipelines.preproc_after_split import create_pipeline as feature_engineering
 from kedro_temp_mlops.pipelines.feature_selection import create_pipeline as feature_selection
 from kedro_temp_mlops.pipelines.ingestion import create_pipeline as ingestion
 from kedro_temp_mlops.pipelines.model_predict import create_pipeline as model_predict
