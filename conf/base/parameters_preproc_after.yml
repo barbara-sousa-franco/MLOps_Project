@@ -5,6 +5,8 @@
 # Link: https://docs.kedro.org/en/1.3.1/configuration/parameters.html
 
 preproc_after_split:
+  random_state: 42
+
 # Imputation strategy
   numeric_strategy: median
   categorical_strategy: most_frequent

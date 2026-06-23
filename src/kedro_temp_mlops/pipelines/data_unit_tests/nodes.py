@@ -2,7 +2,7 @@
 
 Two validation suites:
   1. `cleaned_data`   — validates the preprocessing output (pre-split)
-  2. `model_input`    — validates X_train/X_test (ready for modelling)
+  2. `model_input`    — validates X_train/X_val (ready for modelling)
 """
 
 import logging
@@ -131,7 +131,7 @@ def build_cleaned_data_suite(parameters: dict) -> gx.ExpectationSuite:
 
 
 def build_model_input_suite(parameters: dict) -> gx.ExpectationSuite:
-    """Build expectations for X_train / X_test (ready for modelling).
+    """Build expectations for X_train / X_val (ready for modelling).
 
     Validates that:
     - No missing values in any column
@@ -299,25 +299,35 @@ def unit_test_cleaned_data(
     return df_validation
 
 
+def _run_and_report(df: pd.DataFrame, parameters: dict, label: str) -> pd.DataFrame:
+    """Run model_input suite on one split and return results with a 'Split' column."""
+    suite = build_model_input_suite(parameters)
+    df_val = _run_validation(df, suite, f"model_input_{label}")
+    df_val.insert(0, "Split", label)
+    return df_val
+
+
 def unit_test_model_input(
     X_train: pd.DataFrame,
+    X_val: pd.DataFrame,
     parameters: dict,
 ) -> pd.DataFrame:
-    """Validate X_train (ready for modelling — no nulls, all numeric)."""
-    logger.info("Running data unit tests on model input (X_train)...")
+    """Validate X_train and X_val (ready for modelling — no nulls, all numeric)."""
+    logger.info("Running data unit tests on model input (X_train + X_val)...")
 
-    suite = build_model_input_suite(parameters)
-    df_validation = _run_validation(X_train, suite, "model_input")
+    df_train = _run_and_report(X_train, parameters, "train")
+    df_val   = _run_and_report(X_val,   parameters, "val")
+    df_validation = pd.concat([df_train, df_val], ignore_index=True)
 
     n_failed = int((~df_validation["Success"].astype(bool)).sum())
     if n_failed:
         logger.warning("%d expectation(s) failed on model input.", n_failed)
         for _, r in df_validation[~df_validation["Success"].astype(bool)].iterrows():
-            logger.warning("FAILED: %s on column '%s'", r["Expectation Type"], r["Column"])
+            logger.warning("FAILED [%s]: %s on column '%s'", r["Split"], r["Expectation Type"], r["Column"])
         if parameters.get("hard_fail", False):
             raise ValueError(f"Model input validation failed on {n_failed} expectation(s).")
     else:
-        logger.info("All model input expectations passed.")
+        logger.info("All model input expectations passed (train + val).")
 
     return df_validation
 

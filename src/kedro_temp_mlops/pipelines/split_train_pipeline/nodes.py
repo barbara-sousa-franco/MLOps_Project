@@ -5,11 +5,11 @@ generated using Kedro 1.3.1
 """Train/validation split of the cleaned (pre-transform) data. Runs BEFORE the
 fit-on-train transforms so those fit on the training split only.
 
-NAMING NOTE (professor's bank-example scheme — names kept on purpose):
-The outputs are called `X_train`/`X_test`, but `X_test` here is actually the
-**VALIDATION** set used to tune/select the model. Because this split runs before the
-fit-on-train transforms, `X_test` is transform-only and therefore LEAK-FREE.
-The true out-of-sample TEST set is `ana_data` (from the `split_data` pipeline).
+Outputs:
+  - X_train / y_train: training set — transformers FIT here.
+  - X_val   / y_val  : validation set — used for tuning/selection, LEAK-FREE.
+
+The true out-of-sample TEST set is `test_data` (from the `split_data` pipeline).
 """
 
 import logging
@@ -40,11 +40,11 @@ def split_train(
     if n_bins:
         strat = pd.qcut(y, q=n_bins, labels=False, duplicates="drop")
 
-    X_train, X_test, y_train, y_test = train_test_split(
+    X_train, X_val, y_train, y_val = train_test_split(
         X, y,
         test_size=parameters["test_size"],
         random_state=parameters["random_state"],
         stratify=strat,
     )
-    logger.info("Split: X_train=%s, X_test=%s", X_train.shape, X_test.shape)
-    return X_train, X_test, y_train, y_test, list(X_train.columns)
+    logger.info("Split: X_train=%s, X_val=%s", X_train.shape, X_val.shape)
+    return X_train, X_val, y_train, y_val, list(X_train.columns)

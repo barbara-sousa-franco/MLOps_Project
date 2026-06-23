@@ -8,10 +8,10 @@ Regression model selection in two steps:
 
 SPLIT SEMANTICS (professor's bank-example scheme — names kept, roles clarified):
   - `X_train` (from split_train) = training data → models are FIT here.
-  - `X_test` (from split_train) = VALIDATION set (despite the name!) → used to tune and
+  - `X_val` (from split_train) = VALIDATION set → used to tune and
     select. It is LEAK-FREE (the transformers were fit on X_train and only `transform`ed
-    X_test), which is why all tuning/selection uses it.
-  - `ana_data` (from split_data) = the true out-of-sample TEST set → the honest final
+    X_val), which is why all tuning/selection uses it.
+  - `test_data` (from split_data) = the true out-of-sample TEST set → the honest final
     metric is computed there later (inference / Phase 3), not here.
 So the metrics logged here are VALIDATION metrics, not test metrics.
 
@@ -83,22 +83,22 @@ def _evaluate(model, X, y_true) -> dict:
 
 def model_selection(
     X_train: pd.DataFrame,
-    X_val: pd.DataFrame,        # = X_test from split_train (really the validation set)
+    X_val: pd.DataFrame,
     y_train: pd.DataFrame,
-    y_val: pd.DataFrame,        # = y_test from split_train
+    y_val: pd.DataFrame,
     parameters: dict,
     champion_dict: dict | None = None,
     champion_model=None,
 ):
     """Compare challengers, tune the best one with Optuna and return the selected model.
 
-    Models are FIT on `X_train` and tuned/selected on `X_val` (= `X_test` from split_train,
-    a leak-free validation set). No internal holdout is carved — that would leak, since the
-    transformers were fit on the full X_train. The honest test (ana_data) is evaluated later.
+    Models are FIT on `X_train` and tuned/selected on `X_val` (leak-free validation set).
+    No internal holdout is carved — that would leak, since the transformers were fit on
+    the full X_train. The honest test (test_data) is evaluated later.
 
     Args:
         X_train, X_val, y_train, y_val: training data + the leak-free VALIDATION set
-            (`X_test`/`y_test` from split_train; target is `Price_log`).
+            (target is `Price_log`).
         parameters: candidates + Optuna search spaces (parameters_model_selection.yml).
         champion_dict: metrics of the current champion (state from a previous run; None on
             the first execution). Optional and NOT wired in the graph to avoid cycles.

@@ -17,7 +17,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         node(
             func=split_out_of_sample,
             inputs=["ingested_data", "params:split_data"],
-            outputs=["ref_data", "ana_data"],
+            outputs=["learning_data", "test_data"],
             name="split_out_of_sample_node",
         ),
     ])

@@ -68,7 +68,7 @@ ingestion:
   seed: ${seed}
   primary_key: "index"
   run_validation: true           # ephemeral GX validation before upload (raise on failure)
-  reference_fraction: 0.8        # fraction for ref_data; the rest goes to ana_data (batch)
+  reference_fraction: 0.8        # fraction for learning_data; the rest goes to test_data (batch)
   event_time: "PublishDate"      # NOTE: ~78% null -> used only in the FS (Phase 5), not in the split
   feature_group_version: 1
   # TODO: run the feature-store upload only if True (so whoever lacks a Hopsworks key

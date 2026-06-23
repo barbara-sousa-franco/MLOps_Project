@@ -6,9 +6,9 @@ the professor's bank-example pattern, adapted from classification to regression.
 
 SPLIT SEMANTICS (professor's scheme — names kept, roles clarified):
   - `X_train` = training data; RFE FITS here only.
-  - `X_test` from split_train = the leak-free validation set (despite the name) —
+  - `X_val` from split_train = the leak-free validation set —
     used downstream for tuning / model comparison, NOT here.
-  - `ana_data` = the true out-of-sample test set, evaluated later (inference).
+  - `test_data` = the true out-of-sample test set, evaluated later (inference).
 
 Output: `best_columns` — the RFE-selected feature list. Selection only; explainability
 (SHAP) is handled separately in model_train, per the project requirements.

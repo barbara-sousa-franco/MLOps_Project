@@ -17,12 +17,12 @@ def create_pipeline(**kwargs) -> Pipeline:
             node(
                 func=model_selection,
                 # X_*_scaled = final 05_model_input layer (impute->cap->encode->scale);
-                # X_test_* = leak-free VALIDATION set; target = log-y from split_train
+                # X_val_* = leak-free VALIDATION set; target = log-y from split_train
                 inputs=[
                     "X_train_scaled",
-                    "X_test_scaled",
+                    "X_val_scaled",
                     "y_train_data",
-                    "y_test_data",
+                    "y_val_data",
                     "params:model_selection",
                 ],
                 outputs="selected_model",

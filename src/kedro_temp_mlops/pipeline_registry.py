@@ -28,7 +28,7 @@ def register_pipelines() -> dict[str, Pipeline]:
         -> feature_engineering -> data_unit_tests (+ traffic light)
 
     The `training` pipeline consumes the feature_engineering output (X_train_encoded/
-    X_test_encoded) + the log target from split_train (y_train_data/y_test_data).
+    X_val_encoded) + the log target from split_train (y_train_data/y_val_data).
     """
     p_ingestion = ingestion()
     p_split_data = split_data()
@@ -52,7 +52,7 @@ def register_pipelines() -> dict[str, Pipeline]:
         + p_data_unit_tests
     )
     training = p_model_selection + p_model_train + p_feature_selection
-    inference = p_model_predict  # TODO (Phase 3): + preprocessing_batch (apply transformers to ana_data)
+    inference = p_model_predict  # TODO (Phase 3): + preprocessing_batch (apply transformers to test_data)
     monitoring = p_data_drift
 
     return {

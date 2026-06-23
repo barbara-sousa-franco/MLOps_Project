@@ -13,10 +13,10 @@ from ..preprocessing_train.nodes import clean_data  # single source of truth
 logger = logging.getLogger(__name__)
 
 
-def preprocess_batch(ana_data, imputer, capper, target_encoder, scaler, parameters):
+def preprocess_batch(test_data, imputer, capper, target_encoder, scaler, parameters):
     has_target = parameters.get("batch_has_target", False)
 
-    df, _ = clean_data(ana_data, parameters,
+    df, _ = clean_data(test_data, parameters,
                        has_target=has_target, drop_missing_target=False)
 
     df = imputer.transform(df)

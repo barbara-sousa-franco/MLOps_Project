@@ -9,7 +9,7 @@ def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
             func=clean_data,
-            inputs=["ref_data", "params:preprocessing"],
+            inputs=["learning_data", "params:preprocessing"],
             outputs=["cleaned_data", "reporting_data_preprocessing"],
             name="clean_data",
         ),

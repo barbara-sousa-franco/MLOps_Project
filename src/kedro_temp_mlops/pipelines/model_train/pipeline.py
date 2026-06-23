@@ -17,12 +17,12 @@ def create_pipeline(**kwargs) -> Pipeline:
                 # `best_columns` is optional and NOT wired on the 1st pass (avoids a cycle
                 # with feature_selection). 2nd pass: add "best_columns" here + set
                 # use_feature_selection=true in parameters_model_train.yml.
-                # X_*_scaled = final 05_model_input layer; X_test_* is the validation set
+                # X_*_scaled = final 05_model_input layer; X_val_* is the validation set
                 inputs=[
                     "X_train_scaled",
-                    "X_test_scaled",
+                    "X_val_scaled",
                     "y_train_data",
-                    "y_test_data",
+                    "y_val_data",
                     "params:model_train",
                     "selected_model",
                 ],

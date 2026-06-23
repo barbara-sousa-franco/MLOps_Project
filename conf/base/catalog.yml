@@ -4,7 +4,7 @@
 #
 # General TODO:
 #   - confirm the types (CSV/Pickle/JSON/Matplotlib) and versioning
-#   - datasets coming from the feature store (ingested_data/ref_data/ana_data) can be
+#   - datasets coming from the feature store (ingested_data/learning_data/test_data) can be
 #     materialized as local CSVs for those without a Hopsworks key (see risks in the report)
 
 # --- 01_raw -------------------------------------------------------------------
@@ -22,15 +22,15 @@ ingested_data:
   load_args:
     low_memory: false           # mixed types (many nulls) -> avoids DtypeWarning
 
-ref_data:                       # reference for drift (training distribution)
+learning_data:                  # reference for drift (training distribution)
   type: pandas.CSVDataset
-  filepath: data/02_intermediate/ref_data.csv
+  filepath: data/02_intermediate/learning_data.csv
   load_args:
     low_memory: false
 
-ana_data:                       # batch to analyse for drift / inference
+test_data:                      # true out-of-sample test set for drift / inference
   type: pandas.CSVDataset
-  filepath: data/02_intermediate/ana_data.csv
+  filepath: data/02_intermediate/test_data.csv
   load_args:
     low_memory: false
 
@@ -66,9 +66,9 @@ X_train_data:
     index: false
     encoding: latin-1
 
-X_test_data:
+X_val_data:
   type: pandas.CSVDataset
-  filepath: data/03_primary/X_test.csv
+  filepath: data/03_primary/X_val.csv
   load_args:
     encoding: latin-1
   save_args:
@@ -84,9 +84,9 @@ y_train_data:
     index: false
     encoding: latin-1
 
-y_test_data:
+y_val_data:
   type: pandas.CSVDataset
-  filepath: data/03_primary/y_test.csv
+  filepath: data/03_primary/y_val.csv
   load_args:
     encoding: latin-1
   save_args:
@@ -102,9 +102,9 @@ X_train_imputed:
     index: false
     encoding: latin-1
 
-X_test_imputed:
+X_val_imputed:
   type: pandas.CSVDataset
-  filepath: data/03_primary/X_test_imputed.csv
+  filepath: data/03_primary/X_val_imputed.csv
   load_args:
     encoding: latin-1
   save_args:
@@ -120,9 +120,9 @@ X_train_processed:
     index: false
     encoding: latin-1
 
-X_test_processed:
+X_val_processed:
   type: pandas.CSVDataset
-  filepath: data/03_primary/X_test_processed.csv
+  filepath: data/03_primary/X_val_processed.csv
   load_args:
     encoding: latin-1
   save_args:
@@ -139,9 +139,9 @@ X_train_encoded:
     index: false
     encoding: latin-1
 
-X_test_encoded:
+X_val_encoded:
   type: pandas.CSVDataset
-  filepath: data/03_primary/X_test_encoded.csv
+  filepath: data/03_primary/X_val_encoded.csv
   load_args:
     encoding: latin-1
   save_args:
@@ -182,9 +182,9 @@ target_encoder:                 # MLflow artifact (Pickle) — fit on train (ant
 X_train_scaled:
   type: pandas.ParquetDataset
   filepath: data/05_model_input/X_train_scaled.parquet
-X_test_scaled:
+X_val_scaled:
   type: pandas.ParquetDataset
-  filepath: data/05_model_input/X_test_scaled.parquet
+  filepath: data/05_model_input/X_val_scaled.parquet
 scaler:
   type: pickle.PickleDataset
   filepath: data/04_feature/scaler.pkl

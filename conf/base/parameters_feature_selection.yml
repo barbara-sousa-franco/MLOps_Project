@@ -5,4 +5,4 @@ feature_selection:
     threshold: null      # set a float to use a cutoff instead of top_n
   challenger:
     n_trials: 30
-    # holdout on the validation set (X_test from split_train), consistent with model_selection
+    # holdout on the validation set (X_val from split_train), consistent with model_selection

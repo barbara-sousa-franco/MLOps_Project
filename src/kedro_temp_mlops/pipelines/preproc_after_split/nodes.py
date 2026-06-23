@@ -36,7 +36,7 @@ class PercentileCapper(BaseEstimator, TransformerMixin):
         for col, cap in self.caps_.items():
             X[col] = X[col].clip(upper=cap)
         return X
-    
+
 class GroupImputer(BaseEstimator, TransformerMixin):
     """Impute by group (e.g. per Type): numeric -> group median, categorical -> group mode.
     Falls back to the global median/mode when a group is unseen or has no value.
@@ -77,7 +77,7 @@ class GroupImputer(BaseEstimator, TransformerMixin):
         return X
 
 
-def impute_missing(X_train, X_test, parameters):
+def impute_missing(X_train, X_val, parameters):
     """Impute numeric (group median) and categorical (group mode) by Type.
     Fitted on train; global fallback for rare/unseen types."""
     group_col = parameters.get("impute_group_col", "Type")
@@ -88,43 +88,43 @@ def impute_missing(X_train, X_test, parameters):
 
     imputer = GroupImputer(group_col, numeric_cols, categorical_cols).fit(X_train)
     X_train_imp = imputer.transform(X_train)
-    X_test_imp = imputer.transform(X_test)
+    X_val_imp = imputer.transform(X_val)
 
-    logger.info("Group imputation by %s done. Missing train=%d test=%d",
-                group_col, X_train_imp.isnull().sum().sum(), X_test_imp.isnull().sum().sum())
-    return X_train_imp, X_test_imp, imputer
+    logger.info("Group imputation by %s done. Missing train=%d val=%d",
+                group_col, X_train_imp.isnull().sum().sum(), X_val_imp.isnull().sum().sum())
+    return X_train_imp, X_val_imp, imputer
 
 
-def cap_outliers(X_train, X_test, parameters):
+def cap_outliers(X_train, X_val, parameters):
     """Percentile capping (fitted on train)."""
     capper = PercentileCapper(thresholds=parameters['percentile_thresholds']).fit(X_train)
     logger.info("Capping thresholds: %s", capper.caps_)
-    return capper.transform(X_train), capper.transform(X_test), capper
+    return capper.transform(X_train), capper.transform(X_val), capper
 
 
-def encode_categoricals(X_train, X_test, y_train, parameters):
+def encode_categoricals(X_train, X_val, y_train, parameters):
     """Target-encode high-cardinality nominals. fit_transform on train
-    (cross-fitted, leakage-safe); transform on test.
+    (cross-fitted, leakage-safe); transform on val.
     """
     cols = [c for c in TARGET_ENC_COLS if c in X_train.columns]
     encoder = TargetEncoder(random_state=parameters['random_state'])
 
-    X_train_enc, X_test_enc = X_train.copy(), X_test.copy()
+    X_train_enc, X_val_enc = X_train.copy(), X_val.copy()
     X_train_enc[cols] = encoder.fit_transform(X_train[cols], y_train)
-    X_test_enc[cols] = encoder.transform(X_test[cols])
+    X_val_enc[cols] = encoder.transform(X_val[cols])
 
     logger.info("Target-encoded %s", cols)
-    return X_train_enc, X_test_enc, encoder
+    return X_train_enc, X_val_enc, encoder
 
 
-def scale_features(X_train, X_test, parameters):
+def scale_features(X_train, X_val, parameters):
     """Standardise numeric features. Fitted on train only; scaler reused on batch."""
     scale_cols = X_train.select_dtypes(include=['number']).columns.tolist()
 
     scaler = StandardScaler().fit(X_train[scale_cols])
-    X_train_scaled, X_test_scaled = X_train.copy(), X_test.copy()
+    X_train_scaled, X_val_scaled = X_train.copy(), X_val.copy()
     X_train_scaled[scale_cols] = scaler.transform(X_train[scale_cols])
-    X_test_scaled[scale_cols] = scaler.transform(X_test[scale_cols])
+    X_val_scaled[scale_cols] = scaler.transform(X_val[scale_cols])
 
     logger.info("Scaled %d numeric columns", len(scale_cols))
-    return X_train_scaled, X_test_scaled, scaler
+    return X_train_scaled, X_val_scaled, scaler

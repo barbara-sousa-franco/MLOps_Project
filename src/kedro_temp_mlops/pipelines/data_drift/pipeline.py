@@ -11,7 +11,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=compute_drift,
-                inputs=["ref_data", "ana_data", "params:data_drift"],
+                inputs=["learning_data", "test_data", "params:data_drift"],
                 outputs=["drift_result", "drift_report"],
                 name="compute_drift_node",
             ),

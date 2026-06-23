@@ -7,12 +7,12 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def compute_drift(ref_data: pd.DataFrame, ana_data: pd.DataFrame, parameters: dict):
+def compute_drift(learning_data: pd.DataFrame, test_data: pd.DataFrame, parameters: dict):
     """Compare reference (training) vs new batch distributions and detect drift.
 
     Args:
-        ref_data: reference data (02_intermediate/ref_data.csv).
-        ana_data: batch to analyse (02_intermediate/ana_data.csv).
+        learning_data: reference data (02_intermediate/learning_data.csv).
+        test_data: batch to analyse (02_intermediate/test_data.csv).
         parameters: features to monitor, thresholds, engine (nannyml/evidently).
 
     Returns:
