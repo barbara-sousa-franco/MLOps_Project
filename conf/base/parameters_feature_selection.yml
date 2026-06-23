@@ -6,6 +6,3 @@ feature_selection:
     n_estimators: 200
     max_depth: 12
     random_state: 42
-  shap:
-    top_n: 15
-    threshold: null            # set a float to use a cutoff instead of top_n
