@@ -5,6 +5,32 @@ REGRESSION metrics (RMSE, MAE, R²), never accuracy. Always compare against a ba
 
 WARNING — BUG IN THE EXAMPLE NOT TO COPY: bare `except:` when loading the champion.
 Catch `FileNotFoundError` specifically.
+
+=============================================================================
+NOTES FOR IMPLEMENTERS (decisions already taken with the team — please follow):
+-----------------------------------------------------------------------------
+1. CHAMPION/CHALLENGER + MLflow Model Registry now live HERE (moved out of
+   feature_selection to remove the overlap). feature_selection keeps only SHAP ->
+   best_columns. So `register_model` is where the promotion logic belongs.
+
+2. MODEL INPUTS = `X_train_scaled` / `X_test_scaled` (the 05_model_input layer, after
+   impute -> cap -> encode -> scale). The pipeline is already wired to these. Whatever
+   features the champion is TRAINED on, SHAP in feature_selection must use the SAME ones.
+
+3. SPLIT SEMANTICS (professor's scheme — names kept):
+   - `X_train` = training data (FIT here).
+   - `X_test` = the leak-free VALIDATION set (despite the name) -> use it for the
+     champion-vs-challenger PROMOTION decision.
+   - `ana_data` (split_data) = the true out-of-sample TEST set -> the HONEST final metric
+     is computed there later (Phase 3: preprocessing_batch -> model_predict), NOT here.
+   So `production_model_metrics` here are validation metrics; the test number comes from ana_data.
+
+4. `selected_model` (from model_selection) is ALREADY tuned and fit on X_train. You can use
+   it directly, or refit (e.g. on train+validation) before the final test on ana_data.
+
+5. BASELINE = `sklearn.dummy.DummyRegressor(strategy="mean")` (the naive "predict the mean"
+   model to beat). This is DIFFERENT from the fallback champion when no champion exists yet.
+=============================================================================
 """
 
 import logging
