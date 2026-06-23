@@ -2,8 +2,14 @@
 This is a boilerplate pipeline 'split_train_pipeline'
 generated using Kedro 1.3.1
 """
-"""Train/test split of the cleaned (pre-transform) data. Runs BEFORE the
+"""Train/validation split of the cleaned (pre-transform) data. Runs BEFORE the
 fit-on-train transforms so those fit on the training split only.
+
+NAMING NOTE (professor's bank-example scheme — names kept on purpose):
+The outputs are called `X_train`/`X_test`, but `X_test` here is actually the
+**VALIDATION** set used to tune/select the model. Because this split runs before the
+fit-on-train transforms, `X_test` is transform-only and therefore LEAK-FREE.
+The true out-of-sample TEST set is `ana_data` (from the `split_data` pipeline).
 """
 
 import logging

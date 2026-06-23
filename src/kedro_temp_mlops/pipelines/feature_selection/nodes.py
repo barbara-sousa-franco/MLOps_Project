@@ -2,24 +2,28 @@
 
 SHAP selects features from the champion (also = the required explainability plot),
 then an Optuna-tuned challenger of a DIFFERENT model family is trained on the
-selected features and promoted only if it beats the champion on the sacred test set.
+selected features and promoted only if it beats the champion on the validation set.
 
-Leakage discipline: SHAP + Optuna CV use TRAIN only; the test set is touched once,
-for the final champion-vs-challenger comparison.
+SPLIT SEMANTICS (professor's scheme — names kept, roles clarified):
+  - `X_train` = training data (FIT here).
+  - `X_test` from split_train = the leak-free VALIDATION set (despite the name) — used to
+    tune the challenger (holdout) and to decide champion-vs-challenger.
+  - `ana_data` = the true out-of-sample TEST set, evaluated later (inference / Phase 3).
+
+Leakage discipline: SHAP + challenger tuning FIT on X_train only; the validation set is
+used for tuning and the promotion decision. The honest test (ana_data) is touched once,
+downstream.
 """
 
 import logging
 
 import matplotlib.pyplot as plt
-import mlflow
-import mlflow.sklearn
 import numpy as np
 import optuna
 import pandas as pd
 import shap
 from sklearn.ensemble import HistGradientBoostingRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import cross_val_score
+from sklearn.metrics import mean_squared_error, r2_score, root_mean_squared_error
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +65,19 @@ def select_features(shap_values, X_train: pd.DataFrame, parameters: dict) -> lis
 # ----------------------------------------------------------------------------
 # 2. Challenger — Optuna-tuned, different family, on the selected features
 # ----------------------------------------------------------------------------
-def tune_challenger(X_train: pd.DataFrame, y_train, best_columns: list, parameters: dict):
-    """Optuna-tuned HistGradientBoosting challenger on best_columns (CV on train)."""
+def tune_challenger(X_train: pd.DataFrame, y_train, X_val: pd.DataFrame, y_val,
+                    best_columns: list, parameters: dict):
+    """Optuna-tuned HistGradientBoosting challenger on best_columns.
+
+    Holdout (NOT CV): fit on X_train, evaluate on the leak-free validation set X_val
+    (= X_test from split_train), consistent with model_selection.
+    """
     cfg = parameters.get("challenger", {})
     n_trials = cfg.get("n_trials", 30)
-    cv = cfg.get("cv", 3)
     seed = parameters["random_state"]
 
-    X = X_train[best_columns]
-    y = np.ravel(y_train)
+    X_tr, y_tr = X_train[best_columns], np.ravel(y_train)
+    X_va, y_va = X_val[best_columns], np.ravel(y_val)
 
     def objective(trial):
         params = {
@@ -80,28 +88,29 @@ def tune_challenger(X_train: pd.DataFrame, y_train, best_columns: list, paramete
             "l2_regularization": trial.suggest_float("l2_regularization", 1e-6, 1.0, log=True),
             "random_state": seed,
         }
-        model = HistGradientBoostingRegressor(**params)
-        scores = cross_val_score(model, X, y, cv=cv, scoring="neg_root_mean_squared_error")
-        return -scores.mean()   # minimise RMSE
+        model = HistGradientBoostingRegressor(**params).fit(X_tr, y_tr)
+        return float(root_mean_squared_error(y_va, model.predict(X_va)))   # minimise RMSE
 
     study = optuna.create_study(direction="minimize",
                                 sampler=optuna.samplers.TPESampler(seed=seed))
     study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
 
     best_params = {**study.best_params, "random_state": seed}
-    challenger = HistGradientBoostingRegressor(**best_params).fit(X, y)
+    challenger = HistGradientBoostingRegressor(**best_params).fit(X_tr, y_tr)
 
-    logger.info("Challenger best CV RMSE=%.4f | params=%s", study.best_value, best_params)
+    logger.info("Challenger best validation RMSE=%.4f | params=%s", study.best_value, best_params)
     return challenger, best_params
 
 
 # ----------------------------------------------------------------------------
-# 3. Promote — champion vs challenger on the untouched test set
+# 3. Promote — champion vs challenger on the validation set
 # ----------------------------------------------------------------------------
 def compare_and_promote(production_model, challenger_model, challenger_params,
                         X_test: pd.DataFrame, y_test, best_columns: list, parameters: dict):
-    """Evaluate champion vs challenger on the test set; return the better model.
+    """Evaluate champion vs challenger on the VALIDATION set; return the better model.
 
+    `X_test`/`y_test` here are the split_train validation set (despite the name). This is
+    a SELECTION decision on validation; the honest test (ana_data) is evaluated downstream.
     No MLflow calls here — logging is handled by the catalog (kedro-mlflow datasets).
     """
     y_true = np.ravel(y_test)

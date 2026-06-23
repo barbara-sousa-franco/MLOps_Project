@@ -2,13 +2,21 @@
 
 Regression model selection in two steps:
   1. Challenger comparison — train each candidate model type with default params and
-     compare RMSE on an internal validation split.
+     compare RMSE on the validation set.
   2. Optuna tuning — tune the winning model type (direction="minimize" on RMSE), logging
      each trial as a nested MLflow run.
 
-The target is `Price_log` (log1p of Price), so metrics are computed on the log scale and
-also inverted with expm1 to report RMSE/MAE in euros. The sacred test set (`X_test`) is
-only used for the final evaluation, never during the search.
+SPLIT SEMANTICS (professor's bank-example scheme — names kept, roles clarified):
+  - `X_train` (from split_train) = training data → models are FIT here.
+  - `X_test` (from split_train) = VALIDATION set (despite the name!) → used to tune and
+    select. It is LEAK-FREE (the transformers were fit on X_train and only `transform`ed
+    X_test), which is why all tuning/selection uses it.
+  - `ana_data` (from split_data) = the true out-of-sample TEST set → the honest final
+    metric is computed there later (inference / Phase 3), not here.
+So the metrics logged here are VALIDATION metrics, not test metrics.
+
+The target is `Price_log` (log1p of Price), so metrics are on the log scale and also
+inverted with expm1 to report RMSE/MAE in euros.
 """
 
 import logging
@@ -19,7 +27,6 @@ import optuna
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
-from sklearn.model_selection import train_test_split
 
 logger = logging.getLogger(__name__)
 
@@ -76,47 +83,47 @@ def _evaluate(model, X, y_true) -> dict:
 
 def model_selection(
     X_train: pd.DataFrame,
-    X_test: pd.DataFrame,
+    X_val: pd.DataFrame,        # = X_test from split_train (really the validation set)
     y_train: pd.DataFrame,
-    y_test: pd.DataFrame,
+    y_val: pd.DataFrame,        # = y_test from split_train
     parameters: dict,
     champion_dict: dict | None = None,
     champion_model=None,
 ):
     """Compare challengers, tune the best one with Optuna and return the selected model.
 
+    Models are FIT on `X_train` and tuned/selected on `X_val` (= `X_test` from split_train,
+    a leak-free validation set). No internal holdout is carved — that would leak, since the
+    transformers were fit on the full X_train. The honest test (ana_data) is evaluated later.
+
     Args:
-        X_train, X_test, y_train, y_test: data from the split (target is `Price_log`).
+        X_train, X_val, y_train, y_val: training data + the leak-free VALIDATION set
+            (`X_test`/`y_test` from split_train; target is `Price_log`).
         parameters: candidates + Optuna search spaces (parameters_model_selection.yml).
         champion_dict: metrics of the current champion (state from a previous run; None on
             the first execution). Optional and NOT wired in the graph to avoid cycles.
         champion_model: current champion model (same).
 
     Returns:
-        selected_model — the tuned best model, refit on the full training set (or the
-        existing champion if it is still better).
+        selected_model — the tuned best model, refit on X_train (or the existing champion
+        if it is still better on the validation set).
     """
     random_state = parameters.get("random_state", 42)
-    val_size = parameters.get("val_size", 0.2)
     n_trials = parameters.get("n_trials", 30)
     candidates = parameters["candidates"]
     search_spaces = parameters["search_spaces"]
 
     y_train = _as_1d(y_train)
-    y_test = _as_1d(y_test)
+    y_val = _as_1d(y_val)
     use_mlflow = mlflow.active_run() is not None
 
-    # Internal validation holdout — keeps X_test untouched during the search.
-    X_tr, X_val, y_tr, y_val = train_test_split(
-        X_train, y_train, test_size=val_size, random_state=random_state
-    )
-
     # ---- STEP 1: compare candidate model types (default params) ----------------
+    # Fit on X_train, evaluate on the leak-free validation set (X_val).
     logger.info("STEP 1 — comparing %d candidate model type(s)...", len(candidates))
     val_rmse_by_candidate: dict[str, float] = {}
     for name in candidates:
         model = _build_model(name, {}, random_state)
-        model.fit(X_tr, y_tr)
+        model.fit(X_train, y_train)
         rmse = float(root_mean_squared_error(y_val, model.predict(X_val)))
         val_rmse_by_candidate[name] = rmse
         logger.info("  %s: validation RMSE(log) = %.4f", name, rmse)
@@ -133,7 +140,7 @@ def model_selection(
     def objective(trial: "optuna.Trial") -> float:
         trial_params = {p: _suggest(trial, p, spec) for p, spec in space.items()}
         model = _build_model(best_name, trial_params, random_state)
-        model.fit(X_tr, y_tr)
+        model.fit(X_train, y_train)
         rmse = float(root_mean_squared_error(y_val, model.predict(X_val)))
         if use_mlflow:
             with mlflow.start_run(nested=True, run_name=f"trial_{trial.number}"):
@@ -160,23 +167,23 @@ def model_selection(
             study.best_value, default_val_rmse,
         )
 
-    # ---- STEP 3: refit best model on full train, evaluate on the test set ------
+    # ---- STEP 3: refit best model on X_train, evaluate on the VALIDATION set ----
     selected_model = _build_model(best_name, best_params, random_state)
     selected_model.fit(X_train, y_train)
-    metrics = _evaluate(selected_model, X_test, y_test)
+    metrics = _evaluate(selected_model, X_val, y_val)
     logger.info(
-        "Selected %s | test RMSE(log)=%.4f, R2=%.4f | test RMSE=%.0f EUR, MAE=%.0f EUR",
+        "Selected %s | val RMSE(log)=%.4f, R2=%.4f | val RMSE=%.0f EUR, MAE=%.0f EUR",
         best_name, metrics["rmse_log"], metrics["r2"], metrics["rmse_eur"], metrics["mae_eur"],
     )
 
     if use_mlflow:
         mlflow.log_param("selected_model_type", best_name)
         mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
-        mlflow.log_metrics({f"test_{k}": v for k, v in metrics.items()})
+        mlflow.log_metrics({f"val_{k}": v for k, v in metrics.items()})
 
     # ---- Optional: keep the current champion if it is still better -------------
     if champion_model is not None and champion_dict is not None:
-        champion_rmse = champion_dict.get("test_rmse_log", float("inf"))
+        champion_rmse = champion_dict.get("val_rmse_log", float("inf"))
         if champion_rmse <= metrics["rmse_log"]:
             logger.info(
                 "Champion RMSE(log)=%.4f <= challenger %.4f — keeping champion.",

@@ -21,7 +21,9 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=tune_challenger,
-            inputs=["X_train_encoded", "y_train_data", "best_columns", "params:feature_selection"],
+            # X_test_encoded/y_test_data = the leak-free VALIDATION set (holdout, decision A)
+            inputs=["X_train_encoded", "y_train_data", "X_test_encoded", "y_test_data",
+                    "best_columns", "params:feature_selection"],
             outputs=["challenger_model", "challenger_params"],
             name="tune_challenger_node",
         ),

@@ -1,6 +1,12 @@
 """Carves the out-of-sample batch (`ana_data`) off the full ingested data,
 BEFORE any cleaning. `ref_data` is the training pool; `ana_data` is the
 held-out batch that later flows through `preprocessing_batch`.
+
+ROLE NOTE (professor's bank-example scheme): `ana_data` is the true out-of-sample
+**TEST** set — it never enters training/tuning, so the honest final metric is computed
+on it (inference / Phase 3). The `X_test` produced by `split_train` is, despite its name,
+the VALIDATION set used for tuning/selection. Keep `strategy: random` so `ana_data` stays
+representative as a test set ('biased' is only for the drift demo with injected drift).
 """
 
 import logging

@@ -5,7 +5,8 @@ model_selection:
   direction: "minimize"      # ⚠️ lower RMSE is better -> minimize
   n_trials: 30               # TODO: more trials = better model but slower (trade-off in the report)
   random_state: 42
-  val_size: 0.2              # internal train/validation holdout (keeps X_test untouched during search)
+  # NOTE: tuning/selection use X_test from split_train, which is the leak-free VALIDATION
+  # set (transformers were fit on X_train only). No internal holdout — that would leak.
 
   # STEP 1 — challengers: model types to compare
   candidates:
