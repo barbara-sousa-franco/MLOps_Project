@@ -36,28 +36,63 @@ class PercentileCapper(BaseEstimator, TransformerMixin):
         for col, cap in self.caps_.items():
             X[col] = X[col].clip(upper=cap)
         return X
+    
+class GroupImputer(BaseEstimator, TransformerMixin):
+    """Impute by group (e.g. per Type): numeric -> group median, categorical -> group mode.
+    Falls back to the global median/mode when a group is unseen or has no value.
+    Fitted on train only.
+    """
+
+    def __init__(self, group_col, numeric_cols, categorical_cols):
+        self.group_col = group_col
+        self.numeric_cols = numeric_cols
+        self.categorical_cols = categorical_cols
+
+    def fit(self, X, y=None):
+        g = X.groupby(self.group_col)
+        # per-group statistics
+        self.num_by_group_ = g[self.numeric_cols].median() if self.numeric_cols else None
+        self.cat_by_group_ = (
+            g[self.categorical_cols].agg(lambda s: s.mode().iloc[0] if not s.mode().empty else None)
+            if self.categorical_cols else None
+        )
+        # global fallbacks (for unseen groups / all-NaN groups)
+        self.num_global_ = X[self.numeric_cols].median() if self.numeric_cols else None
+        self.cat_global_ = (
+            X[self.categorical_cols].agg(lambda s: s.mode().iloc[0] if not s.mode().empty else None)
+            if self.categorical_cols else None
+        )
+        self.feature_names_in_ = list(X.columns)   # for batch column alignment
+        return self
+
+    def transform(self, X, y=None):
+        X = X.copy()
+        for col in self.numeric_cols:
+            # map each row's group to that group's median; unseen group -> NaN -> global
+            filled = X[self.group_col].map(self.num_by_group_[col])
+            X[col] = X[col].fillna(filled).fillna(self.num_global_[col])
+        for col in self.categorical_cols:
+            filled = X[self.group_col].map(self.cat_by_group_[col])
+            X[col] = X[col].fillna(filled).fillna(self.cat_global_[col])
+        return X
 
 
 def impute_missing(X_train, X_test, parameters):
-    """Median (numeric) / most-frequent (categorical). Fitted on train."""
+    """Impute numeric (group median) and categorical (group mode) by Type.
+    Fitted on train; global fallback for rare/unseen types."""
+    group_col = parameters.get("impute_group_col", "Type")
+
     numeric_cols = X_train.select_dtypes(include=['number']).columns.tolist()
-    categorical_cols = X_train.select_dtypes(include=['object']).columns.tolist()
+    categorical_cols = [c for c in X_train.select_dtypes(include=['object']).columns
+                        if c != group_col]   # don't impute the group key itself with itself
 
-    num_imputer = SimpleImputer(strategy='median').fit(X_train[numeric_cols])
-    X_train_imp, X_test_imp = X_train.copy(), X_test.copy()
-    X_train_imp[numeric_cols] = num_imputer.transform(X_train[numeric_cols])
-    X_test_imp[numeric_cols] = num_imputer.transform(X_test[numeric_cols])
+    imputer = GroupImputer(group_col, numeric_cols, categorical_cols).fit(X_train)
+    X_train_imp = imputer.transform(X_train)
+    X_test_imp = imputer.transform(X_test)
 
-    if categorical_cols:
-        cat_imputer = SimpleImputer(strategy='most_frequent').fit(X_train[categorical_cols])
-        X_train_imp[categorical_cols] = cat_imputer.transform(X_train[categorical_cols])
-        X_test_imp[categorical_cols] = cat_imputer.transform(X_test[categorical_cols])
-    else:
-        cat_imputer = None
-
-    logger.info("Imputation done. Missing train=%d test=%d",
-                X_train_imp.isnull().sum().sum(), X_test_imp.isnull().sum().sum())
-    return X_train_imp, X_test_imp, num_imputer, cat_imputer
+    logger.info("Group imputation by %s done. Missing train=%d test=%d",
+                group_col, X_train_imp.isnull().sum().sum(), X_test_imp.isnull().sum().sum())
+    return X_train_imp, X_test_imp, imputer
 
 
 def cap_outliers(X_train, X_test, parameters):

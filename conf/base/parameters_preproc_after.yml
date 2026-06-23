@@ -3,3 +3,32 @@
 #
 # Documentation for this file format can be found in "Parameters"
 # Link: https://docs.kedro.org/en/1.3.1/configuration/parameters.html
+
+preproc_after_split:
+# Imputation strategy
+  numeric_strategy: median
+  categorical_strategy: most_frequent
+  impute_group_col: Type
+
+  # Outlier capping (percentile thresholds, fitted on train only)
+  # Area columns excluded — log1p already compresses extremes
+  # Only count-based columns need capping
+  percentile_thresholds:
+    NumberOfBedrooms:  0.995
+    NumberOfBathrooms: 0.995
+    NumberOfWC:        0.995
+    TotalRooms:        0.990
+
+  # Ordinal encoding for EnergyCertificate (A+ = best, No Rating = worst)
+  energy_ordinal_map:
+    "A+": 9
+    A:    8
+    B:    7
+    "B-": 6
+    C:    5
+    D:    4
+    E:    3
+    F:    2
+    G:    1
+    No Rating: 0
+
