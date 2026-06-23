@@ -256,9 +256,7 @@ shap_values:
   type: pickle.PickleDataset
   filepath: data/08_reporting/shap_values.pkl
 
-best_columns:
-  type: pickle.PickleDataset
-  filepath: data/04_feature/best_columns.pkl
+# NOTE: `best_columns` is defined once above (06_models, MLflow artifact) — duplicate removed.
 challenger_model:
   type: pickle.PickleDataset
   filepath: data/06_models/challenger_model.pkl
