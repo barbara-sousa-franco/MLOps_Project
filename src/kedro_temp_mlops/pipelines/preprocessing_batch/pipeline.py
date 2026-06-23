@@ -10,7 +10,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         node(
             func=preprocess_batch,
             inputs=["ana_data", "num_imputer", "cat_imputer", "capper",
-                    "target_encoder", "params:preprocessing"],
+                    "target_encoder", "scaler", "params:preprocessing"],
             outputs="preprocessed_batch_data",
             name="preprocess_batch_node",
         ),

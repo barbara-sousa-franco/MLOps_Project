@@ -179,6 +179,16 @@ target_encoder:                 # MLflow artifact (Pickle) — fit on train (ant
     type: pickle.PickleDataset
     filepath: data/04_feature/target_encoder.pkl
 
+X_train_scaled:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/X_train_scaled.parquet
+X_test_scaled:
+  type: pandas.ParquetDataset
+  filepath: data/05_model_input/X_test_scaled.parquet
+scaler:
+  type: pickle.PickleDataset
+  filepath: data/04_feature/scaler.pkl
+
 # --- 06_models ----------------------------------------------------------------
 selected_model:                 # MLflow artifact (Pickle) — best model from model_selection
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset

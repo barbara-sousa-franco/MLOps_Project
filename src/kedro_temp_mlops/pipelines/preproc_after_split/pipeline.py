@@ -7,7 +7,7 @@ generated using Kedro 1.3.1
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import impute_missing, cap_outliers, encode_categoricals
+from .nodes import impute_missing, cap_outliers, encode_categoricals, scale_features
 
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -30,4 +30,10 @@ def create_pipeline(**kwargs) -> Pipeline:
             outputs=["X_train_encoded", "X_test_encoded", "target_encoder"],
             name="encode_categoricals",
         ),
+        node(
+            func=scale_features,
+            inputs=["X_train_encoded", "X_test_encoded", "params:preprocessing"],
+            outputs=["X_train_scaled", "X_test_scaled", "scaler"],
+            name="scale_features",
+        )
     ])

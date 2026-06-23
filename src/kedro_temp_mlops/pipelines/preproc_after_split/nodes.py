@@ -13,6 +13,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import TargetEncoder
+from sklearn.preprocessing import StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -79,3 +80,16 @@ def encode_categoricals(X_train, X_test, y_train, parameters):
 
     logger.info("Target-encoded %s", cols)
     return X_train_enc, X_test_enc, encoder
+
+
+def scale_features(X_train, X_test, parameters):
+    """Standardise numeric features. Fitted on train only; scaler reused on batch."""
+    scale_cols = X_train.select_dtypes(include=['number']).columns.tolist()
+
+    scaler = StandardScaler().fit(X_train[scale_cols])
+    X_train_scaled, X_test_scaled = X_train.copy(), X_test.copy()
+    X_train_scaled[scale_cols] = scaler.transform(X_train[scale_cols])
+    X_test_scaled[scale_cols] = scaler.transform(X_test[scale_cols])
+
+    logger.info("Scaled %d numeric columns", len(scale_cols))
+    return X_train_scaled, X_test_scaled, scaler

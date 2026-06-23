@@ -13,7 +13,7 @@ from ..preprocessing_train.nodes import clean_data  # single source of truth
 logger = logging.getLogger(__name__)
 
 
-def preprocess_batch(ana_data, num_imputer, cat_imputer, capper, target_encoder, parameters):
+def preprocess_batch(ana_data, num_imputer, cat_imputer, capper, target_encoder, scaler, parameters):
     has_target = parameters.get("batch_has_target", False)
 
     df, _ = clean_data(ana_data, parameters,
@@ -29,6 +29,9 @@ def preprocess_batch(ana_data, num_imputer, cat_imputer, capper, target_encoder,
 
     enc_cols = list(target_encoder.feature_names_in_)
     df[enc_cols] = target_encoder.transform(df[enc_cols])
+
+    scale_cols = list(scaler.feature_names_in_)
+    df[scale_cols] = scaler.transform(df[scale_cols])
 
     logger.info("Preprocessed batch shape: %s", df.shape)
     return df
