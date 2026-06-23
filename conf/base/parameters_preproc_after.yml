@@ -20,6 +20,7 @@ preproc_after_split:
     NumberOfBathrooms: 0.995
     NumberOfWC:        0.995
     TotalRooms:        0.990
+    Price_log:         0.995
 
   # Ordinal encoding for EnergyCertificate (A+ = best, No Rating = worst)
   energy_ordinal_map:
