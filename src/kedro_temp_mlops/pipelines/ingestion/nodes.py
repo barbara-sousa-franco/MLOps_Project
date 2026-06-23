@@ -11,79 +11,10 @@ import logging
 import great_expectations as gx
 import pandas as pd
 from great_expectations import expectations as gxe
+from kedro_temp_mlops.utils import build_expectation_suite, _build_between
 
 logger = logging.getLogger(__name__)
 
-
-def _build_between(column: str, rng: dict) -> gxe.ExpectColumnValuesToBeBetween:
-    """Build an ExpectColumnValuesToBeBetween from {min, max, strict_min, strict_max}.
-
-    NOTE: ignores nulls by default (GX only evaluates non-null values).
-    """
-    return gxe.ExpectColumnValuesToBeBetween(
-        column=column,
-        min_value=rng.get("min"),
-        max_value=rng.get("max"),
-        strict_min=rng.get("strict_min", False),
-        strict_max=rng.get("strict_max", False),
-    )
-
-
-def build_expectation_suite(
-    suite_name: str, feature_group: str, parameters: dict
-) -> gx.ExpectationSuite:
-    """Build a Great Expectations ExpectationSuite (GX 1.x) for a given feature group.
-
-    All rules come from `parameters` (parameters_data_unit_tests.yml) — nothing hard-coded.
-
-    Args:
-        suite_name: Name of the suite to create.
-        feature_group: One of {"numerical", "categorical", "target"} — determines which
-            expectations to apply.
-        parameters: dict from `data_unit_tests` (target_col, column_types, ranges, valid_sets).
-
-    Returns:
-        ExpectationSuite (not yet added to a context) ready to validate.
-
-    Raises:
-        ValueError: if `feature_group` is not recognised.
-    """
-    target_col = parameters.get("target_col")
-    column_types = parameters.get("column_types", {})
-    ranges = parameters.get("ranges", {})
-    valid_sets = parameters.get("valid_sets", {})
-
-    expectations: list = []
-
-    if feature_group == "numerical":
-        # types + ranges for numerical columns (excludes target, which goes in the "target" group)
-        for col, dtype in column_types.items():
-            if col == target_col:
-                continue
-            expectations.append(gxe.ExpectColumnValuesToBeOfType(column=col, type_=dtype))
-        for col, rng in ranges.items():
-            if col == target_col:
-                continue
-            expectations.append(_build_between(col, rng))
-    elif feature_group == "categorical":
-        for col, value_set in valid_sets.items():
-            expectations.append(
-                gxe.ExpectColumnDistinctValuesToBeInSet(column=col, value_set=list(value_set))
-            )
-    elif feature_group == "target":
-        if target_col in column_types:
-            expectations.append(
-                gxe.ExpectColumnValuesToBeOfType(column=target_col, type_=column_types[target_col])
-            )
-        if target_col in ranges:
-            expectations.append(_build_between(target_col, ranges[target_col]))
-    else:
-        raise ValueError(
-            f"Unknown feature_group: {feature_group!r} "
-            "(expected: 'numerical', 'categorical' or 'target')"
-        )
-
-    return gx.ExpectationSuite(name=suite_name, expectations=expectations)
 
 
 def _run_ephemeral_validation(df: pd.DataFrame, parameters: dict) -> None:

@@ -58,8 +58,8 @@ data_unit_tests:
     - "Price > 0"
     - "ConstructionYear in [1800, 2026]"
   traffic_light:
-    flag_path: "data/08_reporting/PIPELINE_OK.flag"
-    fail_flag_path: "data/08_reporting/PIPELINE_FAIL.flag"
+    flag_path:      "data/08_reporting/RAW_OK.flag"
+    fail_flag_path: "data/08_reporting/RAW_FAIL.flag"
 
 # =============================================================================
 # Validation rules for cleaned_data (post-preprocessing, pre-split)
@@ -214,8 +214,8 @@ data_unit_tests_cleaned:
   hard_fail: false
 
   traffic_light:
-    flag_path: data/08_reporting/PIPELINE_OK.flag
-    fail_flag_path: data/08_reporting/PIPELINE_FAIL.flag
+    flag_path:      "data/08_reporting/CLEANED_OK.flag"
+    fail_flag_path: "data/08_reporting/CLEANED_FAIL.flag"
 
 # =============================================================================
 # Validation rules for X_train (post-pipeline, ready for modelling)
@@ -303,3 +303,7 @@ data_unit_tests_model_input:
       min: 0
     LotSize_log:
       min: 0
+    
+  traffic_light:
+    flag_path:      "data/08_reporting/MODEL_INPUT_OK.flag"
+    fail_flag_path: "data/08_reporting/MODEL_INPUT_FAIL.flag"
