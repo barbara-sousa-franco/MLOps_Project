@@ -44,6 +44,9 @@ CONFIG_LOADER_ARGS = {
 #       }
 }
 
+from dotenv import load_dotenv
+load_dotenv()   # at top of src/<pkg>/settings.py
+
 # Class that manages Kedro's library components.
 # from kedro.framework.context import KedroContext
 # CONTEXT_CLASS = KedroContext

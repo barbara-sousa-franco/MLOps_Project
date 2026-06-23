@@ -6,11 +6,22 @@ adapted to the housing use case (`portugal_listings`). GX validation here is EPH
 light happens in the `data_unit_tests` pipeline.
 """
 
+
 import logging
+from pathlib import Path
+from typing import Any, Dict
 
 import great_expectations as gx
+import hopsworks
 import pandas as pd
-from great_expectations import expectations as gxe
+
+from kedro.config import OmegaConfigLoader
+from kedro.framework.project import settings
+
+# module-level credentials load (his proven pattern)
+conf_loader = OmegaConfigLoader(conf_source=str(Path("") / settings.CONF_SOURCE))
+credentials = conf_loader["credentials"]
+
 from kedro_temp_mlops.utils import build_expectation_suite, _build_between
 
 logger = logging.getLogger(__name__)
@@ -62,37 +73,59 @@ def _run_ephemeral_validation(df: pd.DataFrame, parameters: dict) -> None:
     logger.info("Ephemeral GX validation: all expectations passed.")
 
 
-def to_feature_store(
-    data: pd.DataFrame,
-    group_name: str,
-    version: int,
-    description: str,
-    feature_descriptions: dict,
-    credentials: dict,
-):
-    """Upload a feature group to the Hopsworks Feature Store.
 
-    Args:
-        data: DataFrame for the group (numerical / categorical / target) with the primary key.
-        group_name: Name of the feature group in Hopsworks.
-        version: Feature group version.
-        description: Feature group description.
-        feature_descriptions: Dict column->description (update_feature_description).
-        credentials: {"api_key": ..., "project": ...} from conf/local/credentials.yml.
+def to_feature_store(data, group_name, feature_group_version,
+                     description, group_description, credentials_input):
+    """Upload one feature group to Hopsworks. Data already validated upstream."""
+    project = hopsworks.login(
+        api_key_value=credentials_input["api_key"],
+        project=credentials_input["project"],
+    )
+    feature_store = project.get_feature_store()
 
-    Returns:
-        The created/updated feature group object.
+    fg = feature_store.get_or_create_feature_group(
+        name=group_name,
+        version=feature_group_version,
+        description=description,
+        primary_key=["index"],
+        online_enabled=False,
+        # no event_time — static listings snapshot, no point-in-time joins needed
+    )
 
-    TODO to_feature_store:
-      - hopsworks.login(api_key=credentials["api_key"], project=credentials["project"])
-      - fs = project.get_feature_store()
-      - get_or_create_feature_group(primary_key=["index"], event_time="PublishDate")
-      - feature_group.insert(data)
-      - update_feature_description(...) per column
-      - compute_statistics()
-    """
-    # TODO: implement
-    raise NotImplementedError
+    fg.insert(data, overwrite=False, write_options={"wait_for_job": True})
+
+    if group_description:
+        for desc in group_description:
+            fg.update_feature_description(desc["name"], desc["description"])
+
+    fg.compute_statistics()
+    logger.info("Feature group '%s' v%d: inserted %d rows.",
+                group_name, feature_group_version, len(data))
+    return fg
+
+
+def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame:
+    """Read the 3 feature groups back and join on the primary key (write->read demo)."""
+    project = hopsworks.login(
+        api_key_value=credentials["api_key"],
+        project=credentials["project"],
+    )
+    fs = project.get_feature_store()
+
+    fg_cfg = parameters["feature_groups"]   # {numerical: {name, version}, categorical: {...}, target: {...}}
+    pk = parameters.get("primary_key", "index")
+
+    groups = {}
+    for key in ("numerical", "categorical", "target"):
+        fg = fs.get_feature_group(name=fg_cfg[key]["name"], version=fg_cfg[key]["version"])
+        groups[key] = fg.read()
+
+    df = (groups["numerical"]
+          .merge(groups["categorical"], on=pk, how="inner")
+          .merge(groups["target"], on=pk, how="inner"))
+
+    logger.info("Read from feature store: %s rows, %s cols.", df.shape[0], df.shape[1])
+    return df
 
 
 def _split_feature_groups(df: pd.DataFrame, primary_key: str, target_col: str) -> dict:
@@ -112,60 +145,72 @@ def _split_feature_groups(df: pd.DataFrame, primary_key: str, target_col: str) -
     }
 
 
-def ingestion(df_raw: pd.DataFrame, parameters: dict, validation_params: dict) -> pd.DataFrame:
-    """Ingest raw housing data + ephemeral GX validation (+ optional feature store upload).
-
-    Args:
-        df_raw: `raw_house_data` (portugal_listings).
-        parameters: ingestion parameters (target_col, primary_key, run_validation,
-            to_feature_store...).
-        validation_params: GX rules (`data_unit_tests`: column_types, ranges, valid_sets).
-
-    Returns:
-        df_full (ingested_data) — complete dataset for downstream pipelines.
-
-    Raises:
-        ValueError: if ephemeral GX validation fails (protection before upload).
-
-    TODO ingestion (Phase 5 — Hopsworks):
-      - use PublishDate as event_time (NOTE: ~78% nulls — see ASSUMPTIONS)
-      - if parameters["to_feature_store"]: call to_feature_store() for the 3 groups
-        (requires Hopsworks credentials — re-add the "credentials" input to the node then)
-    """
+def ingestion(df_raw: pd.DataFrame, parameters: Dict[str, Any],
+              validation_params: Dict[str, Any]) -> pd.DataFrame:
+    """Ingest raw housing data, validate in memory (ephemeral GX), optionally upload."""
     target_col = parameters["target_col"]
     primary_key = parameters.get("primary_key", "index")
 
     df = df_raw.copy()
 
-    # stable primary key for the feature store / joins (event_time = PublishDate, Phase 5)
+    # stable synthetic primary key for the 3-group join
     if primary_key not in df.columns:
         df = df.reset_index(names=primary_key)
 
-    # target must exist (Price has ~0.2% nulls in raw)
+    # target must exist
     n_before = len(df)
     df = df.dropna(subset=[target_col]).reset_index(drop=True)
-    logger.info(
-        "Ingestion: %d rows (dropped %d without '%s').",
-        len(df),
-        n_before - len(df),
-        target_col,
-    )
+    logger.info("Ingestion: %d rows (dropped %d without '%s').",
+                len(df), n_before - len(df), target_col)
 
-    # EPHEMERAL GX validation in memory BEFORE upload (protection; raises if it fails)
+    # split into the 3 feature groups (each carries the primary key for joins)
+    feature_cols = [c for c in df.columns if c not in (primary_key, target_col)]
+    numeric_cols = df[feature_cols].select_dtypes(include="number").columns.tolist()
+    categorical_cols = [c for c in feature_cols if c not in numeric_cols]
+
+    df_numeric     = df[[primary_key, *numeric_cols]]
+    df_categorical = df[[primary_key, *categorical_cols]]
+    df_target      = df[[primary_key, target_col]]
+
+    # ephemeral GX validation BEFORE upload (his validate_slice pattern)
     if parameters.get("run_validation", True):
-        _run_ephemeral_validation(df, validation_params)
+        context = gx.get_context(mode="ephemeral")
+        context.variables.progress_bars = {"globally": False, "metric_calculations": False}
+        data_source = context.data_sources.add_pandas("ingestion_source")
 
+        def validate_slice(df_slice, asset_name, group):
+            suite = build_expectation_suite(context, f"{asset_name}_suite", group, validation_params)
+            if not suite.expectations:
+                return None
+            asset = data_source.add_dataframe_asset(name=asset_name)
+            batch_def = asset.add_batch_definition_whole_dataframe("batch_def")
+            batch = batch_def.get_batch(batch_parameters={"dataframe": df_slice})
+            return batch.validate(suite)
+
+        results = [
+            validate_slice(df_numeric,     "numeric",     "numerical"),
+            validate_slice(df_categorical, "categorical", "categorical"),
+            validate_slice(df_target,      "target",      "target"),
+        ]
+        if not all(r.success for r in results if r is not None):
+            logger.error("Ephemeral GX validation failed — halting before upload.")
+            raise ValueError("Data did not pass Great Expectations validation.")
+        logger.info("Ephemeral GX validation passed.")
+
+    # upload to Hopsworks
     if parameters.get("to_feature_store", False):
-        # split into 3 groups for the 3 Hopsworks feature groups
-        groups = _split_feature_groups(df, primary_key, target_col)
-        logger.info(
-            "Feature store groups: numerical=%d cols, categorical=%d cols, target=%d cols.",
-            groups["numerical"].shape[1],
-            groups["categorical"].shape[1],
-            groups["target"].shape[1],
-        )
-        # TODO (Phase 5): upload each group via to_feature_store(...).
-        logger.warning("to_feature_store=True but Hopsworks upload is not yet implemented.")
+        creds = credentials["hopsworks"]          # matches your credentials.yml key
+        for data, name, desc in [
+            (df_numeric,     "house_numerical",   "Numerical housing features"),
+            (df_categorical, "house_categorical", "Categorical housing features"),
+            (df_target,      "house_target",      "Target (Price)"),
+        ]:
+            logger.info("Uploading %s to Hopsworks...", name)
+            to_feature_store(
+                data=data, group_name=name, feature_group_version=1,
+                description=desc, group_description=[],
+                credentials_input=creds,
+            )
 
     return df
 
@@ -176,19 +221,24 @@ def ingestion(df_raw: pd.DataFrame, parameters: dict, validation_params: dict) -
 
 
 def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame:
-    """Read data back from the Feature Store (demonstrates the write->read cycle).
+    """Read the 3 feature groups back and join on the primary key (write->read demo)."""
+    project = hopsworks.login(
+        api_key_value=credentials["api_key"],
+        project=credentials["project"],
+    )
+    fs = project.get_feature_store()
 
-    Args:
-        parameters: ingestion parameters (feature group names/versions).
-        credentials: Hopsworks credentials.
+    fg_cfg = parameters["feature_groups"]   # {numerical: {name, version}, categorical: {...}, target: {...}}
+    pk = parameters.get("primary_key", "index")
 
-    Returns:
-        DataFrame reconstructed from the feature groups (ingested_data).
+    groups = {}
+    for key in ("numerical", "categorical", "target"):
+        fg = fs.get_feature_group(name=fg_cfg[key]["name"], version=fg_cfg[key]["version"])
+        groups[key] = fg.read()
 
-    TODO read_from_feature_store:
-      - hopsworks.login(...); fs.get_feature_group(...)
-      - join the 3 groups by primary key "index"
-      - demonstrates the write->read cycle from the professor's tip
-    """
-    # TODO: implement
-    raise NotImplementedError
+    df = (groups["numerical"]
+          .merge(groups["categorical"], on=pk, how="inner")
+          .merge(groups["target"], on=pk, how="inner"))
+
+    logger.info("Read from feature store: %s rows, %s cols.", df.shape[0], df.shape[1])
+    return df

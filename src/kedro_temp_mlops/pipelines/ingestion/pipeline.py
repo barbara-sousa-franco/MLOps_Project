@@ -12,15 +12,16 @@ def create_pipeline(**kwargs) -> Pipeline:
 
     NOTE: the ref/ana split does NOT live here — it is done in the `split_data` pipeline
     (split_out_of_sample), which also supports the 'biased' strategy for the drift demo.
-
-    TODO (Phase 5): once the feature-store upload is ready, re-add the "credentials" input
-    to the ingestion node and/or a Node(read_from_feature_store).
     """
     return pipeline(
         [
             node(
                 func=ingestion,
-                inputs=["raw_house_data", "params:ingestion", "params:data_unit_tests"],
+                inputs=[
+                    "raw_house_data",
+                    "params:ingestion",
+                    "params:data_unit_tests",
+                ],
                 outputs="ingested_data",
                 name="ingestion_node",
             ),
