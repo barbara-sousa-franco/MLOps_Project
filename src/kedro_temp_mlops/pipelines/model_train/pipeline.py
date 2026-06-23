@@ -14,10 +14,9 @@ def create_pipeline(**kwargs) -> Pipeline:
         [
             node(
                 func=model_train,
-                # `best_columns` is optional and NOT wired on the 1st pass (avoids a cycle
-                # with feature_selection). 2nd pass: add "best_columns" here + set
-                # use_feature_selection=true in parameters_model_train.yml.
-                # X_*_scaled = final 05_model_input layer; X_val_* is the validation set
+                # best_columns comes from feature_selection (RFE) — Kedro runs
+                # feature_selection first automatically via this data dependency.
+                # use_feature_selection in params controls whether they are applied.
                 inputs=[
                     "X_train_scaled",
                     "X_val_scaled",
@@ -25,6 +24,7 @@ def create_pipeline(**kwargs) -> Pipeline:
                     "y_val_data",
                     "params:model_train",
                     "selected_model",
+                    "best_columns",
                 ],
                 outputs=[
                     "production_model",

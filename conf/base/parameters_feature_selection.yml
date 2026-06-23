@@ -1,8 +1,11 @@
 feature_selection:
   random_state: 42
+  method: rfe                  # rfe | all (all = keep all columns, skip selection)
+  n_features_to_select: 15     # number of features RFE keeps
+  baseline_model_params:
+    n_estimators: 200
+    max_depth: 12
+    random_state: 42
   shap:
     top_n: 15
-    threshold: null      # set a float to use a cutoff instead of top_n
-  challenger:
-    n_trials: 30
-    # holdout on the validation set (X_val from split_train), consistent with model_selection
+    threshold: null            # set a float to use a cutoff instead of top_n

@@ -129,7 +129,7 @@ X_val_processed:
     index: false
     encoding: latin-1
 
-# FINAL features (post feature_engineering) that enter modelling
+# FINAL features (post preproc_after_split) that enter modelling
 X_train_encoded:
   type: pandas.CSVDataset
   filepath: data/03_primary/X_train_encoded.csv

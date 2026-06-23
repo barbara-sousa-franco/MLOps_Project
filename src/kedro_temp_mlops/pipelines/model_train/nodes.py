@@ -27,10 +27,14 @@ NOTES FOR IMPLEMENTERS (decisions already taken — please follow):
 
 import logging
 import math
+import pickle
+import tempfile
+import os
 
 import mlflow
 import mlflow.sklearn
 import pandas as pd
+import shap
 from mlflow import MlflowClient
 from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor
@@ -96,6 +100,29 @@ def model_train(
     if use_mlflow:
         mlflow.log_metrics({f"val_{k}": v for k, v in candidate_metrics.items()})
         mlflow.log_metrics({f"baseline_{k}": v for k, v in baseline_metrics.items()})
+
+    # --- SHAP explainability ---
+    try:
+        explainer = shap.TreeExplainer(candidate)
+        shap_values = explainer(X_val)
+
+        if use_mlflow:
+            with tempfile.TemporaryDirectory() as tmp:
+                # save the explainer object
+                explainer_path = os.path.join(tmp, "shap_explainer.pkl")
+                with open(explainer_path, "wb") as f:
+                    pickle.dump(explainer, f)
+                mlflow.log_artifact(explainer_path, artifact_path="shap")
+
+                # save the shap values object
+                shap_values_path = os.path.join(tmp, "shap_values.pkl")
+                with open(shap_values_path, "wb") as f:
+                    pickle.dump(shap_values, f)
+                mlflow.log_artifact(shap_values_path, artifact_path="shap")
+
+        logger.info("SHAP explainer and values saved as MLflow artifacts.")
+    except Exception as e:
+        logger.warning("SHAP computation failed (non-tree model?): %s", e)
 
     production_model_metrics = {
         **{f"val_{k}": v for k, v in candidate_metrics.items()},

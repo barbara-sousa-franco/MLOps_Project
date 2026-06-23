@@ -9,7 +9,7 @@ from kedro.pipeline import Pipeline
 
 from kedro_temp_mlops.pipelines.data_drift import create_pipeline as data_drift
 from kedro_temp_mlops.pipelines.data_unit_tests import create_pipeline as data_unit_tests
-from kedro_temp_mlops.pipelines.preproc_after_split import create_pipeline as feature_engineering
+from kedro_temp_mlops.pipelines.preproc_after_split import create_pipeline as preproc_after_split
 from kedro_temp_mlops.pipelines.feature_selection import create_pipeline as feature_selection
 from kedro_temp_mlops.pipelines.ingestion import create_pipeline as ingestion
 from kedro_temp_mlops.pipelines.model_predict import create_pipeline as model_predict
@@ -24,17 +24,18 @@ def register_pipelines() -> dict[str, Pipeline]:
     """Register the project pipelines and named compositions.
 
     Data-prep flow (Phase 0/1):
-        ingestion -> split_data (ref/ana) -> preprocessing (clean) -> split_train
-        -> feature_engineering -> data_unit_tests (+ traffic light)
+        ingestion -> split_data -> preprocessing (clean) -> split_train
+        -> preproc_after_split (impute/cap/encode/scale) -> data_unit_tests
 
-    The `training` pipeline consumes the feature_engineering output (X_train_encoded/
-    X_val_encoded) + the log target from split_train (y_train_data/y_val_data).
+    Training flow:
+        feature_selection (RFE -> best_columns) -> model_selection (Optuna)
+        -> model_train (champion/challenger + SHAP)
     """
     p_ingestion = ingestion()
     p_split_data = split_data()
     p_preprocessing = preprocessing()
     p_split_train = split_train()
-    p_feature_engineering = feature_engineering()
+    p_preproc_after_split = preproc_after_split()
     p_data_unit_tests = data_unit_tests()
     p_model_selection = model_selection()
     p_model_train = model_train()
@@ -48,10 +49,10 @@ def register_pipelines() -> dict[str, Pipeline]:
         + p_split_data
         + p_preprocessing
         + p_split_train
-        + p_feature_engineering
+        + p_preproc_after_split
         + p_data_unit_tests
     )
-    training = p_model_selection + p_model_train + p_feature_selection
+    training = p_feature_selection + p_model_selection + p_model_train
     inference = p_model_predict  # TODO (Phase 3): + preprocessing_batch (apply transformers to test_data)
     monitoring = p_data_drift
 
@@ -61,7 +62,7 @@ def register_pipelines() -> dict[str, Pipeline]:
         "split_data": p_split_data,
         "preprocessing": p_preprocessing,
         "split_train": p_split_train,
-        "feature_engineering": p_feature_engineering,
+        "preproc_after_split": p_preproc_after_split,
         "data_unit_tests": p_data_unit_tests,
         "model_selection": p_model_selection,
         "model_train": p_model_train,

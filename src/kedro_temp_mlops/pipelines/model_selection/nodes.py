@@ -87,27 +87,29 @@ def model_selection(
     y_train: pd.DataFrame,
     y_val: pd.DataFrame,
     parameters: dict,
+    best_columns: list | None = None,
     champion_dict: dict | None = None,
     champion_model=None,
 ):
     """Compare challengers, tune the best one with Optuna and return the selected model.
 
     Models are FIT on `X_train` and tuned/selected on `X_val` (leak-free validation set).
-    No internal holdout is carved — that would leak, since the transformers were fit on
-    the full X_train. The honest test (test_data) is evaluated later.
+    If `best_columns` is provided (from feature_selection), only those features are used.
 
     Args:
-        X_train, X_val, y_train, y_val: training data + the leak-free VALIDATION set
-            (target is `Price_log`).
+        X_train, X_val, y_train, y_val: training data + the leak-free VALIDATION set.
         parameters: candidates + Optuna search spaces (parameters_model_selection.yml).
-        champion_dict: metrics of the current champion (state from a previous run; None on
-            the first execution). Optional and NOT wired in the graph to avoid cycles.
-        champion_model: current champion model (same).
+        best_columns: feature subset from RFE (feature_selection pipeline).
+        champion_dict, champion_model: optional state from previous runs (not wired to avoid cycles).
 
     Returns:
-        selected_model — the tuned best model, refit on X_train (or the existing champion
-        if it is still better on the validation set).
+        selected_model — the tuned best model, refit on X_train.
     """
+    if best_columns:
+        X_train = X_train[best_columns]
+        X_val = X_val[best_columns]
+        logger.info("Using %d selected features from feature_selection.", len(best_columns))
+
     random_state = parameters.get("random_state", 42)
     n_trials = parameters.get("n_trials", 30)
     candidates = parameters["candidates"]
