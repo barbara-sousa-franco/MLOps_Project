@@ -27,7 +27,9 @@ import mlflow
 import numpy as np
 import optuna
 import pandas as pd
+from lightgbm import LGBMRegressor
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 
 logger = logging.getLogger(__name__)
@@ -47,6 +49,8 @@ def _load_best_columns() -> list | None:
 _MODELS = {
     "RandomForestRegressor": RandomForestRegressor,
     "GradientBoostingRegressor": GradientBoostingRegressor,
+    "XGBRegressor": XGBRegressor,
+    "LGBMRegressor": LGBMRegressor,
 }
 
 

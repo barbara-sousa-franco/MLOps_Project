@@ -46,6 +46,11 @@ def compute_shap(
     explainer = shap.TreeExplainer(production_model)
     shap_values = explainer(X_val)
 
+    # save explainer to disk so the notebook can load base_values for waterfall plots
+    disk_explainer_path = os.path.join("data", "08_reporting", "shap_explainer.pkl")
+    with open(disk_explainer_path, "wb") as f:
+        pickle.dump(explainer, f)
+
     use_mlflow = mlflow.active_run() is not None
     if use_mlflow:
         with tempfile.TemporaryDirectory() as tmp:
