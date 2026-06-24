@@ -84,12 +84,12 @@ def to_feature_store(data, group_name, feature_group_version,
     feature_store = project.get_feature_store()
 
     fg = feature_store.get_or_create_feature_group(
-        name=group_name,
-        version=feature_group_version,
-        description=description,
-        primary_key=["index"],
-        online_enabled=False,
-        # no event_time — static listings snapshot, no point-in-time joins needed
+    name=group_name,
+    version=feature_group_version,
+    description=description,
+    primary_key=["index"],
+    online_enabled=False,
+    time_travel_format="NONE",      # <-- add this; no Delta dependency, no event_time needed
     )
 
     fg.insert(data, overwrite=False, write_options={"wait_for_job": True})
@@ -218,3 +218,15 @@ def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame
 
     logger.info("Read from feature store: %s rows, %s cols.", df.shape[0], df.shape[1])
     return df
+
+
+def get_ingested_data(df_raw: pd.DataFrame, parameters: Dict[str, Any],
+                      validation_params: Dict[str, Any]) -> pd.DataFrame:
+    """Either build ingested_data from the CSV (and optionally upload to the store),
+    or read it back from the feature store — controlled by `get_from_feature_store`."""
+    if parameters.get("get_from_feature_store", False):
+        logger.info("Sourcing ingested_data FROM the feature store.")
+        return read_from_feature_store(parameters, credentials["hopsworks"])
+
+    # otherwise: normal CSV path (validate + optional upload)
+    return ingestion(df_raw, parameters, validation_params)

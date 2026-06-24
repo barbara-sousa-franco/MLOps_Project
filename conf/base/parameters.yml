@@ -74,7 +74,8 @@ ingestion:
     numerical:   {name: house_numerical,   version: 1, description: "Numeric housing features"}
     categorical: {name: house_categorical, version: 1, description: "Categorical housing features"}
     target:      {name: house_target,      version: 1, description: "Target (Price)"}
-  to_feature_store: false
+  to_feature_store: true
+  get_from_feature_store: false
 
 # --- data_drift --------------------------------------------------------------
 data_drift:
