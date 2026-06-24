@@ -86,11 +86,11 @@ data_unit_tests_cleaned:
     max: 135000
 
   not_null_columns:
+    # only columns guaranteed non-null at the cleaned (pre-imputation) stage.
+    # Type/Parking/Elevator still have nulls here — they are imputed later in
+    # preproc_after_split, so their not-null check belongs in the model_input suite.
     - Price_log
     - District
-    - Type
-    - Parking
-    - Elevator
 
   column_types:
     Price_log: float64
@@ -99,12 +99,14 @@ data_unit_tests_cleaned:
     GrossArea_log: float64
     BuiltArea_log: float64
     LotSize_log: float64
-    Parking: Int64
-    TotalRooms: Int64
-    NumberOfBedrooms: Int64
-    NumberOfBathrooms: Int64
-    NumberOfWC: Int64
-    ConstructionYear: Int64
+    # NOTE: these still have NaN at the cleaned stage, so pandas keeps them float64
+    # (not nullable Int64). Imputation/casting happens later in preproc_after_split.
+    Parking: float64
+    TotalRooms: float64
+    NumberOfBedrooms: float64
+    NumberOfBathrooms: float64
+    NumberOfWC: float64
+    ConstructionYear: float64
     EnergyCertificate: int64
     Garage: float64
     Elevator: float64
@@ -171,6 +173,7 @@ data_unit_tests_cleaned:
       - Ilha das Flores
       - Ilha de Porto Santo
       - Ilha de Santa Maria
+      - Ilha de São Jorge
       - Ilha de São Miguel
       - Ilha do Faial
       - Ilha Terceira
@@ -246,7 +249,7 @@ data_unit_tests_model_input:
     - NumberOfBathrooms
 
   column_types:
-    EnergyCertificate: float64
+    EnergyCertificate: int64        # ordinal-encoded (0-9) in X_train_encoded
     GrossArea_log: float64
     TotalArea_log: float64
     Parking: float64
@@ -264,7 +267,9 @@ data_unit_tests_model_input:
     NumberOfBathrooms: float64
 
   model_input_row_count:
-    min: 80000
+    # the same suite validates BOTH X_train (~86k) and X_val (~22k), so the range must
+    # cover both splits (80/20 of the ~108k learning pool).
+    min: 15000
     max: 110000
 
   model_input_ranges:

@@ -34,7 +34,10 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=unit_test_model_input,
-            inputs=["X_train_data", "X_val_data", "params:data_unit_tests_model_input"],
+            # validate the ENCODED, post-imputation data (0 nulls, ranges preserved) —
+            # NOT the raw split (X_train_data) which still has nulls, nor the scaled data
+            # (X_train_scaled) whose ranges are destroyed by standardisation.
+            inputs=["X_train_encoded", "X_val_encoded", "params:data_unit_tests_model_input"],
             outputs="reporting_tests_model_input",
             name="unit_test_model_input_node",
         ),

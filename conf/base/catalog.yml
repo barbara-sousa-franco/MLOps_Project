@@ -39,10 +39,11 @@ cleaned_data:
   filepath: data/02_intermediate/cleaned_data.csv
   load_args:
     low_memory: false
-    encoding: latin-1
+    encoding: utf-8        # Portuguese accents (District/Type) — latin-1 mangled them,
+    # which broke the GX District distinct-values check in data_unit_tests.
   save_args:
     index: false
-    encoding: latin-1
+    encoding: utf-8
  
 reporting_data_preprocessing:
   type: json.JSONDataset
@@ -271,26 +272,10 @@ shap_importance:
   filepath: data/08_reporting/shap_importance.csv
 
 # NOTE: `best_columns` is defined once above (06_models, MLflow artifact) — duplicate removed.
-challenger_model:
-  type: pickle.PickleDataset
-  filepath: data/06_models/challenger_model.pkl
-challenger_params:
-  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
-  dataset:
-    type: json.JSONDataset
-    filepath: data/06_models/challenger_params.json
-promoted_model:
-  type: kedro_mlflow.io.models.MlflowModelTrackingDataset
-  flavor: mlflow.sklearn
-  save_args:
-    artifact_path: promoted_model
-champion_challenger_report:
-  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
-  dataset:
-    type: json.JSONDataset
-    filepath: data/08_reporting/champion_challenger_report.json
-champion_challenger_metrics:
-  type: kedro_mlflow.io.metrics.MlflowMetricsHistoryDataset
+# NOTE: removed orphan datasets from the old champion/challenger feature_selection
+# (challenger_model, challenger_params, promoted_model, champion_challenger_report,
+# champion_challenger_metrics). They were neither produced nor consumed after the rework,
+# and champion_challenger_metrics tried to read a deleted MLflow experiment on load.
 
 # TODO datasets still to map (objects passed between nodes that may not need
 #      persistence — can stay as an implicit MemoryDataset):
