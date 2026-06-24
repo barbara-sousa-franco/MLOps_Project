@@ -10,8 +10,8 @@ model_selection:
 
   # STEP 1 — challengers: model types to compare
   candidates:
-      - RandomForestRegressor
-    # - GradientBoostingRegressor
+    # - RandomForestRegressor
+      - GradientBoostingRegressor
     # - XGBRegressor          # optional
     # - LGBMRegressor         # optional
 
