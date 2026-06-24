@@ -155,7 +155,7 @@ def ingestion(df_raw: pd.DataFrame, parameters: Dict[str, Any],
         data_source = context.data_sources.add_pandas("ingestion_source")
 
         def validate_slice(df_slice, asset_name, group):
-            suite = build_expectation_suite(context, f"{asset_name}_suite", group, validation_params)
+            suite = build_expectation_suite(f"{asset_name}_suite", group, validation_params)
             if not suite.expectations:
                 return None
             asset = data_source.add_dataframe_asset(name=asset_name)

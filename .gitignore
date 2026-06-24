@@ -237,3 +237,4 @@ data/08_reporting/**
 # MLflow tracking local
 mlruns/
 mlflow.db
+conf/local/mlflow.yml
