@@ -266,6 +266,10 @@ shap_values:
   type: pickle.PickleDataset
   filepath: data/08_reporting/shap_values.pkl
 
+shap_importance:
+  type: pandas.CSVDataset
+  filepath: data/08_reporting/shap_importance.csv
+
 # NOTE: `best_columns` is defined once above (06_models, MLflow artifact) — duplicate removed.
 challenger_model:
   type: pickle.PickleDataset

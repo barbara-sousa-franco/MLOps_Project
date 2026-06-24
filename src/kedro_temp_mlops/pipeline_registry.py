@@ -9,6 +9,7 @@ from kedro.pipeline import Pipeline
 
 from kedro_temp_mlops.pipelines.data_drift import create_pipeline as data_drift
 from kedro_temp_mlops.pipelines.data_unit_tests import create_pipeline as data_unit_tests
+from kedro_temp_mlops.pipelines.explainability import create_pipeline as explainability
 from kedro_temp_mlops.pipelines.preproc_after_split import create_pipeline as preproc_after_split
 from kedro_temp_mlops.pipelines.feature_selection import create_pipeline as feature_selection
 from kedro_temp_mlops.pipelines.ingestion import create_pipeline as ingestion
@@ -27,9 +28,11 @@ def register_pipelines() -> dict[str, Pipeline]:
         ingestion -> split_data -> preprocessing (clean) -> split_train
         -> preproc_after_split (impute/cap/encode/scale) -> data_unit_tests
 
-    Training flow:
-        feature_selection (RFE -> best_columns) -> model_selection (Optuna)
-        -> model_train (champion/challenger + SHAP)
+    Training flow (two-pass):
+        Pass 1: kedro run --pipeline training            (all features)
+        Pass 2: kedro run --pipeline feature_selection   (RFE on champion → best_columns)
+        Pass 3: kedro run --pipeline training            (use_feature_selection: true)
+        Pass 4: kedro run --pipeline explainability      (SHAP on final champion)
     """
     p_ingestion = ingestion()
     p_split_data = split_data()
@@ -42,6 +45,7 @@ def register_pipelines() -> dict[str, Pipeline]:
     p_feature_selection = feature_selection()
     p_model_predict = model_predict()
     p_data_drift = data_drift()
+    p_explainability = explainability()
 
     # named compositions
     data_prep = (
@@ -52,8 +56,8 @@ def register_pipelines() -> dict[str, Pipeline]:
         + p_preproc_after_split
         + p_data_unit_tests
     )
-    training = p_feature_selection + p_model_selection + p_model_train
-    inference = p_model_predict  # TODO (Phase 3): + preprocessing_batch (apply transformers to test_data)
+    training = p_model_selection + p_model_train   # Pass 1: all features; Pass 2: best_columns (use_feature_selection: true)
+    inference = p_model_predict
     monitoring = p_data_drift
 
     return {
@@ -67,6 +71,7 @@ def register_pipelines() -> dict[str, Pipeline]:
         "model_selection": p_model_selection,
         "model_train": p_model_train,
         "feature_selection": p_feature_selection,
+        "explainability": p_explainability,
         "model_predict": p_model_predict,
         "data_drift": p_data_drift,
         # named compositions

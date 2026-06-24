@@ -4,43 +4,38 @@ REGRESSION metrics (RMSE, MAE, R²), never accuracy. Always compare against a ba
 (mean of Price) — the skill requires a baseline.
 
 =============================================================================
-NOTES FOR IMPLEMENTERS (decisions already taken — please follow):
------------------------------------------------------------------------------
-1. CHAMPION/CHALLENGER + MLflow Model Registry live HERE.
-   feature_selection keeps only SHAP -> best_columns.
+WORKFLOW (two-pass):
+  Pass 1 — kedro run --pipeline training  (use_feature_selection: false)
+      model_selection + model_train on all features → champion saved
+  Pass 2 — kedro run --pipeline feature_selection
+      RFE on champion → best_columns saved to data/06_models/best_cols.pkl
+  Pass 3 — kedro run --pipeline training  (use_feature_selection: true)
+      model_selection + model_train on best_columns → final champion
+  Pass 4 — kedro run --pipeline explainability
+      SHAP on final champion → artifacts logged to MLflow
 
-2. MODEL INPUTS = `X_train_scaled` / `X_val_scaled` (05_model_input layer, after
-   impute -> cap -> encode -> scale).
-
-3. SPLIT SEMANTICS (professor's scheme):
-   - `X_train` = training data (FIT here).
-   - `X_val` = leak-free VALIDATION set -> used for the
-     champion-vs-challenger PROMOTION decision.
-   - `test_data` (split_data) = true out-of-sample TEST set -> honest final metric
-     computed in Phase 3 (preprocessing_batch -> model_predict), NOT here.
-
-4. `selected_model` (from model_selection) is ALREADY tuned and fit on X_train.
-
-5. BASELINE = DummyRegressor(strategy="mean") — naive "predict the mean" baseline.
+SPLIT SEMANTICS:
+  - X_train / X_val: from split_train (val is VALIDATION, not test)
+  - test_data: true out-of-sample, evaluated in Phase 3 only
 =============================================================================
 """
 
 import logging
 import math
-import pickle
-import tempfile
 import os
+import pickle
 
 import mlflow
 import mlflow.sklearn
 import pandas as pd
-import shap
 from mlflow import MlflowClient
 from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 logger = logging.getLogger(__name__)
+
+_BEST_COLUMNS_PATH = os.path.join("data", "06_models", "best_cols.pkl")
 
 
 def _regression_metrics(y_true, y_pred) -> dict:
@@ -50,6 +45,17 @@ def _regression_metrics(y_true, y_pred) -> dict:
     return {"rmse": rmse, "mae": mae, "r2": r2}
 
 
+def _load_best_columns() -> list | None:
+    """Load best_columns from disk if feature_selection has already run."""
+    try:
+        with open(_BEST_COLUMNS_PATH, "rb") as f:
+            cols = pickle.load(f)
+        logger.info("Loaded %d best_columns from %s.", len(cols), _BEST_COLUMNS_PATH)
+        return cols
+    except FileNotFoundError:
+        return None
+
+
 def model_train(
     X_train: pd.DataFrame,
     X_val: pd.DataFrame,
@@ -57,22 +63,28 @@ def model_train(
     y_val: pd.Series,
     parameters: dict,
     selected_model=None,
-    best_columns=None,
 ):
-    """Train the champion, evaluate on the validation set, and return model + metrics.
+    """Train the champion, evaluate on the validation set, return model + metrics.
+
+    If use_feature_selection=true and best_cols.pkl exists (from feature_selection
+    pipeline), restricts features to those columns before training.
 
     Returns:
         Tuple (production_model, production_columns, production_model_metrics).
-        Metrics are VALIDATION metrics; the honest test number comes from test_data (Phase 3).
     """
     use_fs = parameters.get("use_feature_selection", False)
-    if use_fs and best_columns:
-        X_train = X_train[best_columns]
-        X_val = X_val[best_columns]
+    if use_fs:
+        best_columns = _load_best_columns()
+        if best_columns:
+            X_train = X_train[best_columns]
+            X_val = X_val[best_columns]
+            logger.info("Using %d selected features.", len(best_columns))
+        else:
+            logger.warning("use_feature_selection=true but best_cols.pkl not found — using all features.")
 
     production_columns = list(X_train.columns)
 
-    # --- build candidate model ---
+    # --- candidate model ---
     if selected_model is not None:
         candidate = selected_model
     else:
@@ -100,29 +112,7 @@ def model_train(
     if use_mlflow:
         mlflow.log_metrics({f"val_{k}": v for k, v in candidate_metrics.items()})
         mlflow.log_metrics({f"baseline_{k}": v for k, v in baseline_metrics.items()})
-
-    # --- SHAP explainability ---
-    try:
-        explainer = shap.TreeExplainer(candidate)
-        shap_values = explainer(X_val)
-
-        if use_mlflow:
-            with tempfile.TemporaryDirectory() as tmp:
-                # save the explainer object
-                explainer_path = os.path.join(tmp, "shap_explainer.pkl")
-                with open(explainer_path, "wb") as f:
-                    pickle.dump(explainer, f)
-                mlflow.log_artifact(explainer_path, artifact_path="shap")
-
-                # save the shap values object
-                shap_values_path = os.path.join(tmp, "shap_values.pkl")
-                with open(shap_values_path, "wb") as f:
-                    pickle.dump(shap_values, f)
-                mlflow.log_artifact(shap_values_path, artifact_path="shap")
-
-        logger.info("SHAP explainer and values saved as MLflow artifacts.")
-    except Exception as e:
-        logger.warning("SHAP computation failed (non-tree model?): %s", e)
+        mlflow.log_param("use_feature_selection", use_fs)
 
     production_model_metrics = {
         **{f"val_{k}": v for k, v in candidate_metrics.items()},
@@ -136,11 +126,8 @@ def register_model(model, metrics: dict, parameters: dict):
     """Register the trained model in the MLflow Model Registry with champion/challenger logic.
 
     - New model always enters as 'challenger'.
-    - If it beats the current 'champion' (lower val_rmse) it is promoted to 'champion'.
-    - If no champion exists yet, the new model is immediately promoted.
-
-    Returns:
-        dict with version info and whether the model was promoted.
+    - If it beats the current 'champion' (lower val_rmse) → promoted to 'champion'.
+    - If no champion exists yet → promoted directly.
     """
     registry_cfg = parameters.get("registry", {})
     model_name = registry_cfg.get("model_name", "house_price_model")
@@ -149,14 +136,12 @@ def register_model(model, metrics: dict, parameters: dict):
 
     client = MlflowClient()
 
-    # ensure the registered model exists
     try:
         client.get_registered_model(model_name)
     except mlflow.exceptions.MlflowException:
         client.create_registered_model(model_name)
         logger.info("Created registered model '%s'", model_name)
 
-    # log and register the model under the active run
     active_run = mlflow.active_run()
     if active_run is None:
         raise RuntimeError("register_model must be called inside an active MLflow run.")
@@ -168,11 +153,9 @@ def register_model(model, metrics: dict, parameters: dict):
     mv = mlflow.register_model(model_uri=model_uri, name=model_name)
     logger.info("Registered '%s' version %s", model_name, mv.version)
 
-    # tag as challenger first
     client.set_registered_model_alias(model_name, challenger_alias, mv.version)
     logger.info("Tagged version %s as '%s'", mv.version, challenger_alias)
 
-    # champion/challenger comparison
     new_rmse = metrics.get("val_rmse")
     promoted = False
 
@@ -182,9 +165,7 @@ def register_model(model, metrics: dict, parameters: dict):
         champion_rmse = champion_run.data.metrics.get("val_rmse")
 
         if champion_rmse is not None and new_rmse is not None:
-            logger.info(
-                "Champion RMSE=%.4f  vs  Challenger RMSE=%.4f", champion_rmse, new_rmse
-            )
+            logger.info("Champion RMSE=%.4f  vs  Challenger RMSE=%.4f", champion_rmse, new_rmse)
             if new_rmse < champion_rmse:
                 client.set_registered_model_alias(model_name, champion_alias, mv.version)
                 logger.info("Challenger promoted to champion (version %s)", mv.version)
@@ -197,7 +178,6 @@ def register_model(model, metrics: dict, parameters: dict):
             promoted = True
 
     except mlflow.exceptions.MlflowException:
-        # no champion yet — promote immediately
         client.set_registered_model_alias(model_name, champion_alias, mv.version)
         logger.info("No existing champion — version %s promoted directly.", mv.version)
         promoted = True

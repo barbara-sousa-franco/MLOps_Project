@@ -24,7 +24,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                     "y_train_data",
                     "y_val_data",
                     "params:model_selection",
-                    "best_columns",
                 ],
                 outputs="selected_model",
                 name="model_selection_node",

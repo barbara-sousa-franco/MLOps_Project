@@ -104,30 +104,6 @@ def to_feature_store(data, group_name, feature_group_version,
     return fg
 
 
-def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame:
-    """Read the 3 feature groups back and join on the primary key (write->read demo)."""
-    project = hopsworks.login(
-        api_key_value=credentials["api_key"],
-        project=credentials["project"],
-    )
-    fs = project.get_feature_store()
-
-    fg_cfg = parameters["feature_groups"]   # {numerical: {name, version}, categorical: {...}, target: {...}}
-    pk = parameters.get("primary_key", "index")
-
-    groups = {}
-    for key in ("numerical", "categorical", "target"):
-        fg = fs.get_feature_group(name=fg_cfg[key]["name"], version=fg_cfg[key]["version"])
-        groups[key] = fg.read()
-
-    df = (groups["numerical"]
-          .merge(groups["categorical"], on=pk, how="inner")
-          .merge(groups["target"], on=pk, how="inner"))
-
-    logger.info("Read from feature store: %s rows, %s cols.", df.shape[0], df.shape[1])
-    return df
-
-
 def _split_feature_groups(df: pd.DataFrame, primary_key: str, target_col: str) -> dict:
     """Split the dataset into 3 groups (numerical/categorical/target) with the primary key.
 

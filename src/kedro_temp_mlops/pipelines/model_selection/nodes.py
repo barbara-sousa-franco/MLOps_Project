@@ -20,6 +20,8 @@ inverted with expm1 to report RMSE/MAE in euros.
 """
 
 import logging
+import os
+import pickle
 
 import mlflow
 import numpy as np
@@ -29,6 +31,17 @@ from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 
 logger = logging.getLogger(__name__)
+
+_BEST_COLUMNS_PATH = os.path.join("data", "06_models", "best_cols.pkl")
+
+
+def _load_best_columns() -> list | None:
+    try:
+        with open(_BEST_COLUMNS_PATH, "rb") as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        return None
+
 
 # Candidate model registry: name (from parameters) -> sklearn estimator class.
 _MODELS = {
@@ -87,28 +100,24 @@ def model_selection(
     y_train: pd.DataFrame,
     y_val: pd.DataFrame,
     parameters: dict,
-    best_columns: list | None = None,
     champion_dict: dict | None = None,
     champion_model=None,
 ):
     """Compare challengers, tune the best one with Optuna and return the selected model.
 
     Models are FIT on `X_train` and tuned/selected on `X_val` (leak-free validation set).
-    If `best_columns` is provided (from feature_selection), only those features are used.
-
-    Args:
-        X_train, X_val, y_train, y_val: training data + the leak-free VALIDATION set.
-        parameters: candidates + Optuna search spaces (parameters_model_selection.yml).
-        best_columns: feature subset from RFE (feature_selection pipeline).
-        champion_dict, champion_model: optional state from previous runs (not wired to avoid cycles).
+    If use_feature_selection=true and best_cols.pkl exists, restricts to those features.
 
     Returns:
         selected_model — the tuned best model, refit on X_train.
     """
-    if best_columns:
-        X_train = X_train[best_columns]
-        X_val = X_val[best_columns]
-        logger.info("Using %d selected features from feature_selection.", len(best_columns))
+    use_fs = parameters.get("use_feature_selection", False)
+    if use_fs:
+        best_columns = _load_best_columns()
+        if best_columns:
+            X_train = X_train[best_columns]
+            X_val = X_val[best_columns]
+            logger.info("Using %d selected features from feature_selection.", len(best_columns))
 
     random_state = parameters.get("random_state", 42)
     n_trials = parameters.get("n_trials", 30)
