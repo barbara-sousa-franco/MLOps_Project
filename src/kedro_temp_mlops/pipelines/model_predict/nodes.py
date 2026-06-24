@@ -1,9 +1,9 @@
 """Nodes for the `model_predict` pipeline.
 
-Runs the champion on the preprocessed out-of-sample batch (`test_data` -> the true TEST
-set). Predictions are made on the log scale and inverted with expm1 to euros. When the
-batch carries the target (`batch_has_target: true`), this is also where the HONEST test
-metric is computed — the test set is touched here, once, for the final evaluation.
+Runs the champion on the preprocessed out-of-sample batch (`test_data`). 
+Predictions are made on the log scale and inverted with expm1 to euros. When the
+batch carries the target (`batch_has_target: true`), this is also where the true test
+metric is computed for the final evaluation.
 """
 
 import logging

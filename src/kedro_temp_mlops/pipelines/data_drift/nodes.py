@@ -1,9 +1,9 @@
-"""Nodes for the `data_drift` pipeline (monitoring — valued by the professor).
+"""Nodes for the `data_drift` pipeline.
 
-Compares the REFERENCE distribution (`learning_data`, the training pool) against the
-NEW batch (`test_data`, the out-of-sample data) with evidently 0.7.x, producing an HTML
+Compares the Reference distribution (`learning_data`, the training pool) against the
+new batch (`test_data`, the out-of-sample data) with evidently 0.7.x, producing an HTML
 report and a per-feature drift table. Optionally injects artificial drift into the batch
-to demonstrate that detection works (professor's tip).
+to demonstrate that detection works.
 """
 
 import logging
