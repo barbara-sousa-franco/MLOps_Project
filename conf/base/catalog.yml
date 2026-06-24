@@ -156,17 +156,13 @@ encoder_transform:              # MLflow artifact (Pickle)
     type: pickle.PickleDataset
     filepath: data/04_feature/encoder.pkl
 
-num_imputer:
+# single GroupImputer produced by preproc_after_split (impute_missing) and reused by
+# preprocessing_batch via transform. (Replaces the old num_imputer/cat_imputer pair.)
+imputer:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: pickle.PickleDataset
-    filepath: data/04_feature/num_imputer.pkl
-
-cat_imputer:
-  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
-  dataset:
-    type: pickle.PickleDataset
-    filepath: data/04_feature/cat_imputer.pkl
+    filepath: data/04_feature/imputer.pkl
 
 capper:
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
@@ -227,6 +223,12 @@ predictions:
   filepath: data/07_model_output/predictions.csv
 
 # --- 08_reporting -------------------------------------------------------------
+production_test_metrics:        # HONEST test metrics on the out-of-sample batch (test_data)
+  type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
+  dataset:
+    type: json.JSONDataset
+    filepath: data/08_reporting/production_test_metrics.json
+
 reporting_tests:                # data unit test results (GX)
   type: pandas.CSVDataset
   filepath: data/08_reporting/data_tests.csv

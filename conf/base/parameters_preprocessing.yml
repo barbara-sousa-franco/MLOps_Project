@@ -2,7 +2,7 @@ preprocessing:
 
   # Target column
   target_col: Price_log
-  batch_has_target: false   # true only for a labelled batch (drift / performance estimation)
+  batch_has_target: true    # test_data is labelled (Price) -> enables the honest test metric
 
   # Train/test split
   test_size: 0.2

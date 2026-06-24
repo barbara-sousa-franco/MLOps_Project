@@ -4,9 +4,7 @@ Defaults to inference (no target); `batch_has_target` opts into a labelled batch
 """
 
 import logging
-from typing import Any, Dict
 
-import pandas as pd
 
 from ..preprocessing_train.nodes import clean_data  # single source of truth
 
@@ -18,6 +16,13 @@ def preprocess_batch(test_data, imputer, capper, target_encoder, scaler, paramet
 
     df, _ = clean_data(test_data, parameters,
                        has_target=has_target, drop_missing_target=False)
+
+    # Train/serve dtype skew: the training cleaned_data round-trips through CSV, turning
+    # pandas nullable Int64 columns into float64. The batch is cleaned in-memory and keeps
+    # Int64, which breaks the float-median imputer. Normalise to match the fitted transformers.
+    nullable_int = [c for c in df.columns if str(df[c].dtype).startswith(("Int", "UInt"))]
+    if nullable_int:
+        df[nullable_int] = df[nullable_int].astype("float64")
 
     df = imputer.transform(df)
     df = capper.transform(df)

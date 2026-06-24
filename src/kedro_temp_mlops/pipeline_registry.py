@@ -14,6 +14,7 @@ from kedro_temp_mlops.pipelines.preproc_after_split import create_pipeline as pr
 from kedro_temp_mlops.pipelines.feature_selection import create_pipeline as feature_selection
 from kedro_temp_mlops.pipelines.ingestion import create_pipeline as ingestion
 from kedro_temp_mlops.pipelines.model_predict import create_pipeline as model_predict
+from kedro_temp_mlops.pipelines.preprocessing_batch import create_pipeline as preprocessing_batch
 from kedro_temp_mlops.pipelines.model_selection import create_pipeline as model_selection
 from kedro_temp_mlops.pipelines.model_train import create_pipeline as model_train
 from kedro_temp_mlops.pipelines.preprocessing_train import create_pipeline as preprocessing
@@ -44,6 +45,7 @@ def register_pipelines() -> dict[str, Pipeline]:
     p_model_train = model_train()
     p_feature_selection = feature_selection()
     p_model_predict = model_predict()
+    p_preprocessing_batch = preprocessing_batch()
     p_data_drift = data_drift()
     p_explainability = explainability()
 
@@ -57,7 +59,9 @@ def register_pipelines() -> dict[str, Pipeline]:
         + p_data_unit_tests
     )
     training = p_model_selection + p_model_train   # Pass 1: all features; Pass 2: best_columns (use_feature_selection: true)
-    inference = p_model_predict
+    # Phase 3: preprocess the out-of-sample batch (test_data) with the train-fitted
+    # transformers, then predict + evaluate the HONEST test metric with the champion.
+    inference = p_preprocessing_batch + p_model_predict
     monitoring = p_data_drift
 
     return {
