@@ -2,7 +2,7 @@
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import ingestion
+from .nodes import get_ingested_data
 
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -16,14 +16,10 @@ def create_pipeline(**kwargs) -> Pipeline:
     return pipeline(
         [
             node(
-                func=ingestion,
-                inputs=[
-                    "raw_house_data",
-                    "params:ingestion",
-                    "params:data_unit_tests",
-                ],
-                outputs="ingested_data",
-                name="ingestion_node",
-            ),
+            func=get_ingested_data,        
+            inputs=["raw_house_data", "params:ingestion", "params:data_unit_tests"],
+            outputs="ingested_data",
+            name="ingestion_node",
+        ),
         ]
     )
