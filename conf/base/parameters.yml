@@ -78,10 +78,29 @@ ingestion:
 
 # --- data_drift --------------------------------------------------------------
 data_drift:
-  # TODO: drift engine and config
-  engine: "evidently"          # or "nannyml"
-  # features_to_monitor: [...]  # subset to monitor (default: numeric_features)
-  # inject_artificial_drift: false  # extra: inject drift to demonstrate detection
+  engine: "evidently"           # evidently 0.7.x (Report + DataDriftPreset)
+  drift_share_threshold: 0.5    # flag DATASET drift if >= this fraction of columns drifted
+  # curated columns to monitor (avoid City/Town — very high cardinality)
+  numeric_features:
+    - Price
+    - GrossArea
+    - TotalArea
+    - LivingArea
+    - LotSize
+    - BuiltArea
+    - ConstructionYear
+    - TotalRooms
+    - NumberOfBedrooms
+    - NumberOfWC
+    - NumberOfBathrooms
+    - Parking
+  categorical_features:
+    - District
+    - Type
+    - EnergyCertificate
+  # EXTRA (professor's tip): inject artificial drift into the batch to demonstrate detection
+  inject_artificial_drift: false
+  numeric_shift_pct: 0.3        # multiply numeric features by (1 + this) when injecting
 
 # --- reporting ---------------------------------------------------------------
 reporting:
