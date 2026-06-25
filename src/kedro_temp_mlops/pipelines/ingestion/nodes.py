@@ -23,52 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 
-def _run_ephemeral_validation(df: pd.DataFrame, parameters: dict) -> None:
-    """Validate `df` in memory (ephemeral GX) against the 3 suites; raises if it fails.
-
-    Protection BEFORE upload to the feature store (professor's pattern). The "official"
-    revalidation + traffic light is performed afterwards in the `data_unit_tests` pipeline.
-
-    Args:
-        df: dataset to validate.
-        parameters: dict from `data_unit_tests` (rules derived from EDA).
-
-    Raises:
-        ValueError: if any expectation fails (logs the failing ones).
-    """
-    context = gx.get_context(mode="ephemeral")
-    # suppress GX progress bars in logs
-    context.variables.progress_bars = {"globally": False, "metric_calculations": False}
-
-    data_source = context.data_sources.add_pandas("ingestion_source")
-    asset = data_source.add_dataframe_asset(name="houses")
-    batch_definition = asset.add_batch_definition_whole_dataframe("batch")
-
-    failed: list[str] = []
-    for group in ("numerical", "categorical", "target"):
-        suite = build_expectation_suite(f"ingestion_{group}", group, parameters)
-        if not suite.expectations:
-            continue
-        suite = context.suites.add(suite)
-        validation_definition = context.validation_definitions.add(
-            gx.ValidationDefinition(data=batch_definition, suite=suite, name=f"vd_{group}")
-        )
-        result = validation_definition.run(batch_parameters={"dataframe": df})
-        if not result.success:
-            for r in result["results"]:
-                if not r["success"]:
-                    cfg = r["expectation_config"]
-                    failed.append(f"{cfg['type']}(column={cfg['kwargs'].get('column')})")
-
-    if failed:
-        for f in failed:
-            logger.error("GX validation failed: %s", f)
-        raise ValueError(f"Ephemeral GX validation failed on {len(failed)} expectation(s): {failed}")
-
-    logger.info("Ephemeral GX validation: all expectations passed.")
-
-
-
 def to_feature_store(data, group_name, feature_group_version,
                      description, group_description, credentials_input):
     """Upload one feature group to Hopsworks. Data already validated upstream."""
