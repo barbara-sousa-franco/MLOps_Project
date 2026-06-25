@@ -5,9 +5,11 @@ End-to-end MLOps pipeline to predict `Price` (regression) from
 Optuna + SHAP + Great Expectations + Hopsworks (feature store) + evidently/nannyml
 (drift) + Prefect + Docker**.
 
-> Status: **skeleton/scaffold**. Nodes have the signature + docstring + TODOs and raise
-> `NotImplementedError`. See [BLUEPRINT.md](BLUEPRINT.md) for the full map and work
-> distribution, and [ASSUMPTIONS.md](ASSUMPTIONS.md) for assumptions.
+> Status: **functional end-to-end.** Implemented: data prep (Great Expectations + traffic
+> light), model selection (Optuna), model training (+ MLflow Model Registry), feature
+> selection (RFE), explainability (SHAP), inference (honest test on out-of-sample data),
+> drift monitoring (evidently), Hopsworks feature store, Docker, and Prefect orchestration.
+> Remaining: `reporting` pipeline + pytest. See [ASSUMPTIONS.md](ASSUMPTIONS.md).
 
 ## Setup
 
@@ -38,25 +40,25 @@ cp .env.example .env         # fill in HW_API_KEY etc.
 ## How to run
 
 ```bash
-# individual pipelines (run in isolation):
-kedro run --pipeline ingestion
-kedro run --pipeline data_unit_tests
-kedro run --pipeline preprocessing_train
-# ... (split_data, model_selection, model_train, feature_selection,
-#      preprocessing_batch, model_predict, data_drift, reporting)
+# named compositions (the usual way to run):
+uv run kedro run --pipeline data_prep    # ingestion -> split_data -> preprocessing -> split_train -> preproc_after_split -> data_unit_tests (writes the traffic light)
+uv run kedro run --pipeline training     # model_selection (Optuna) -> model_train (+ MLflow Registry)
+uv run kedro run --pipeline inference    # preprocessing_batch -> model_predict (honest test on test_data)
+uv run kedro run --pipeline monitoring   # data_drift (evidently)
+uv run kedro run                         # __default__ (data_prep + training + inference + monitoring)
 
-# named compositions:
-kedro run --pipeline data_prep      # ingestion + data_unit_tests + preprocessing_train + split_data
-kedro run --pipeline training       # model_selection + model_train + feature_selection
-kedro run --pipeline inference      # preprocessing_batch + model_predict
-kedro run --pipeline monitoring     # data_drift
-kedro run                           # __default__ (full sequence)
+# individual pipelines also run in isolation, e.g.:
+uv run kedro run --pipeline feature_selection   # RFE on the champion -> best_columns
+uv run kedro run --pipeline explainability      # SHAP on the champion
 ```
 
+> Two-pass feature selection: run `training` (all features) -> `feature_selection` (RFE) ->
+> `training` again with `use_feature_selection: true` -> `explainability` (SHAP).
+
 ### Hopsworks (feature store)
-`parameters.yml: ingestion.to_feature_store` controls the upload. With `false`, the pipeline
-runs from local CSVs (for those without an API key). With `true`, it performs the
-write->read cycle in the feature store.
+`parameters.yml: ingestion.to_feature_store` controls the upload (**default `false`** so the
+pipeline runs from local CSVs without a Hopsworks key — Docker / grader / CI). Set `true`
+locally (with `HW_API_KEY` in `.env`) to perform the write->read cycle in the feature store.
 
 ### MLflow UI and Kedro-Viz
 ```bash
@@ -64,10 +66,15 @@ kedro mlflow ui        # tracking + model registry (champion/challenger)
 kedro viz              # pipeline graph
 ```
 
-### Prefect (scheduled orchestration)
+### Prefect (orchestration)
 ```bash
-python deployment_prefect.py   # create/serve deployments (daily drift, weekly training, nightly tests)
+uv run prefect server start             # UI at http://127.0.0.1:4200
+uv run python kedro_prefect_flow.py     # run a flow once (flow_data_prep)
+uv run python deployment_prefect.py     # register + serve the cron deployments
 ```
+Flows wrap the Kedro pipelines; `full_pipeline` chains them and **gates** the modelling on
+the data-quality traffic light (stops if any `*_FAIL.flag`). Deployments: nightly data
+tests, daily drift, weekly training, on-demand full pipeline.
 
 ### Tests (pytest — distinct from data_unit_tests)
 ```bash
@@ -75,9 +82,12 @@ pytest                 # smoke test end-to-end + unit tests on the sample (tests
 ```
 
 ### Docker
+Data is **not** baked into the image — mount it at runtime with `-v` (don't mount `mlruns`,
+its host paths break in the container). Note: pass the full `kedro run` command.
 ```bash
 docker build -t mlops-houses .
-docker run --rm mlops-houses --pipeline __default__
+docker run --rm -v "$(pwd)/data:/home/kedro_docker/data" \
+  mlops-houses kedro run --pipeline data_prep
 ```
 
 ## Structure
