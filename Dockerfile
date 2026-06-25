@@ -1,29 +1,36 @@
-# Containerization of the MLOps project.
-# TODO Dockerfile:
-#   - choose a slim base and pin the Python version (project uses >=3.13)
-#   - install deps from requirements.txt (pinned versions)
-#   - ENTRYPOINT that runs `kedro run` (or serves Prefect)
+# Containerization of the MLOps project — mirrors the kedro-docker standard layout.
+# Data is NOT baked in (see .dockerignore); mount it at runtime with -v.
+ARG BASE_IMAGE=python:3.13-slim
+FROM $BASE_IMAGE AS runtime-environment
 
-FROM python:3.13-slim
+# system build tools — a few deps have no prebuilt wheels and compile from source
+# (phik <- ydata-profiling needs cmake/C++; twofish <- hopsworks needs gcc)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential cmake && \
+    rm -rf /var/lib/apt/lists/*
 
-# Avoid .pyc and force unbuffered stdout/stderr (logs visible in the container)
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# install project requirements (pinned, generated from uv.lock)
+COPY requirements.txt /tmp/requirements.txt
+RUN python -m pip install -U pip
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm -f /tmp/requirements.txt
 
-WORKDIR /app
+# add a non-root kedro user (security best practice)
+ARG KEDRO_UID=999
+ARG KEDRO_GID=0
+RUN groupadd -f -g ${KEDRO_GID} kedro_group && \
+    useradd -m -d /home/kedro_docker -s /bin/bash -g ${KEDRO_GID} -u ${KEDRO_UID} kedro_docker
 
-# TODO: install system dependencies if needed (e.g. build-essential for C libs)
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR /home/kedro_docker
+USER kedro_docker
 
-# Copy the project
-COPY . .
+FROM runtime-environment
 
-# Install the Kedro package (src layout)
-RUN pip install --no-cache-dir -e .
+# copy the whole project except what is in .dockerignore
+ARG KEDRO_UID=999
+ARG KEDRO_GID=0
+COPY --chown=${KEDRO_UID}:${KEDRO_GID} . .
 
-# TODO: define the default command.
-#   Option A (Kedro):   ENTRYPOINT ["kedro", "run"]
-#   Option B (Prefect): ENTRYPOINT ["python", "deployment_prefect.py"]
-ENTRYPOINT ["kedro", "run"]
-CMD ["--pipeline", "__default__"]
+EXPOSE 8888
+
+# default: run the full pipeline. Override with: docker run ... --pipeline <name>
+CMD ["kedro", "run"]

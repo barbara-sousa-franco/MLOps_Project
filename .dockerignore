@@ -1,28 +1,33 @@
-# Ficheiros/pastas a NÃO copiar para a imagem Docker.
-# TODO: rever conforme o que o container precisa em runtime.
+# What NOT to copy into the Docker image (keeps it small + no secrets).
 
-.git
-.gitignore
+# don't copy the Docker files themselves
+Dockerfile
+.dockerignore
+
+# secrets — NEVER in the image (mlflow.yml is kept; only credentials/.env excluded)
+.env
+conf/**/*credentials*
+
+# virtual environments
 .venv
 .venv-mlops
+
+# caches / compiled
 __pycache__/
 *.py[codz]
 .pytest_cache/
 .ruff_cache/
 .ipynb_checkpoints/
 
-# Dados pesados e artefactos locais (montar como volume se necessário)
-data/0*/
-mlruns/
-.viz/
+# data (mounted at runtime with -v), MLflow tracking, viz
+data
+mlruns
+mlflow.db
+.viz
 
-# Notebooks e docs
-notebooks/
+# notebooks, git, OS
+notebooks
 *.ipynb
-
-# Segredos (NUNCA na imagem)
-.env
-conf/local/credentials.yml
-
-# OS
+.git
+.gitignore
 .DS_Store
