@@ -2,6 +2,17 @@
 import pandas as pd
 import great_expectations as gx
 from great_expectations import expectations as gxe
+from pathlib import Path
+import logging
+import hopsworks
+
+from kedro.config import OmegaConfigLoader
+from kedro.framework.project import settings
+
+logger = logging.getLogger(__name__)
+
+conf_loader = OmegaConfigLoader(conf_source=str(Path("") / settings.CONF_SOURCE))
+credentials = conf_loader["credentials"]
 
 
 def _build_between(column: str, rng: dict) -> gxe.ExpectColumnValuesToBeBetween:
@@ -67,3 +78,60 @@ def get_validation_results(validation_results) -> pd.DataFrame:
             "Observed Value": observed,
         })
     return pd.DataFrame(rows)
+
+def to_feature_store(data, group_name, feature_group_version,
+                     description, group_description, credentials_input):
+    """Upload one feature group to Hopsworks. Data already validated upstream."""
+    project = hopsworks.login(
+        api_key_value=credentials_input["api_key"],
+        project=credentials_input["project"],
+    )
+    feature_store = project.get_feature_store()
+
+    fg = feature_store.get_or_create_feature_group(
+        name=group_name,
+        version=feature_group_version,
+        description=description,
+        primary_key=["index"],
+        online_enabled=False,
+        time_travel_format="NONE",
+    )
+    fg.insert(data, overwrite=False, write_options={"wait_for_job": True})
+
+    if group_description:
+        for desc in group_description:
+            fg.update_feature_description(desc["name"], desc["description"])
+
+    fg.compute_statistics()
+    logger.info("Feature group '%s' v%d: inserted %d rows.",
+                group_name, feature_group_version, len(data))
+    return fg
+
+
+def upload_cleaned_to_fs(cleaned_data, parameters):
+    """Store cleaned (pre-split, statistics-free) data. Pass-through."""
+    if not parameters.get("to_feature_store", False):
+        return cleaned_data
+    df = cleaned_data.copy()
+    if "index" not in df.columns:
+        df = df.reset_index(names="index")
+    to_feature_store(
+        data=df, group_name="house_cleaned", feature_group_version=1,
+        description="Cleaned housing data (pre-split, statistics-free)",
+        group_description=[], credentials_input=credentials["hopsworks"],
+    )
+    return cleaned_data
+
+
+def upload_engineered_to_fs(X_train_scaled, y_train_data, parameters):
+    """Store feature-engineered + scaled TRAIN data (fit-on-train; cycle demo). Pass-through."""
+    if not parameters.get("to_feature_store", False):
+        return X_train_scaled
+    df = X_train_scaled.copy().reset_index(names="index")
+    df["Price_log"] = y_train_data.values
+    to_feature_store(
+        data=df, group_name="house_engineered_train", feature_group_version=1,
+        description="Feature-engineered + scaled TRAIN data (fitted on train split)",
+        group_description=[], credentials_input=credentials["hopsworks"],
+    )
+    return X_train_scaled

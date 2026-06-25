@@ -18,12 +18,7 @@ import pandas as pd
 from kedro.config import OmegaConfigLoader
 from kedro.framework.project import settings
 
-# module-level credentials load (his proven pattern)
-conf_loader = OmegaConfigLoader(conf_source=str(Path("") / settings.CONF_SOURCE))
-credentials = conf_loader["credentials"]
-
-from kedro_temp_mlops.utils import build_expectation_suite, _build_between
-
+from kedro_temp_mlops.utils import build_expectation_suite, _build_between, to_feature_store, credentials
 logger = logging.getLogger(__name__)
 
 

@@ -8,6 +8,7 @@ generated using Kedro 1.3.1
 from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import impute_missing, cap_outliers, encode_categoricals, scale_features
+from kedro_temp_mlops.utils import upload_engineered_to_fs
 
 
 def create_pipeline(**kwargs) -> Pipeline:
@@ -35,5 +36,11 @@ def create_pipeline(**kwargs) -> Pipeline:
             inputs=["X_train_encoded", "X_val_encoded", "params:preproc_after_split"],
             outputs=["X_train_scaled", "X_val_scaled", "scaler"],
             name="scale_features",
-        )
+        ),
+        node(
+            func=upload_engineered_to_fs,
+            inputs=["X_train_scaled", "y_train_data", "params:ingestion"],
+            outputs="engineered_fs_done",
+            name="upload_engineered_to_fs_node",
+        ),
     ])
