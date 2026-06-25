@@ -1,83 +1,99 @@
-"""Prefect flows that call Kedro pipelines by name.
+"""Prefect flows that orchestrate the Kedro pipelines.
 
-Copies the professor's example pattern. Each flow calls run_pipeline(<name>) from
-src/kedro_temp_mlops/run_kedro_pipeline.py.
+Each flow runs one Kedro composition via run_pipeline(); `full_pipeline` chains them and
+GATES the modelling steps on the data-quality traffic light (only proceeds if green).
+Mirrors the professor's bank_example pattern.
 """
 
-import logging
+import sys
+from pathlib import Path
 
-from prefect import flow, task
+from prefect import flow, get_run_logger, task
 
-from kedro_temp_mlops.run_kedro_pipeline import run_pipeline
+# make the src-layout package importable when running this file directly
+PROJECT_ROOT = Path(__file__).parent
+sys.path.append(str(PROJECT_ROOT / "src"))
 
-logger = logging.getLogger(__name__)
+from kedro_temp_mlops.run_kedro_pipeline import run_pipeline  # noqa: E402
 
-
-@task
-def _run(pipeline_name: str):
-    """Prefect task that runs a Kedro pipeline by name.
-
-    TODO: handle Prefect errors/retries here (retries=, retry_delay_seconds=).
-    """
-    # TODO: return run_pipeline(pipeline_name)
-    raise NotImplementedError
+REPORTING = PROJECT_ROOT / "data" / "08_reporting"
 
 
-@flow(name="flow_data_unit_tests")
+# ----------------------------------------------------------------------------
+# task: run one Kedro pipeline
+# ----------------------------------------------------------------------------
+@task(retries=1, retry_delay_seconds=10)
+def run_kedro_task(pipeline_name: str):
+    """Run a Kedro pipeline by name (with a retry on transient failure)."""
+    logger = get_run_logger()
+    logger.info("Running Kedro pipeline: %s", pipeline_name)
+    run_pipeline(pipeline_name)
+    logger.info("Kedro pipeline '%s' finished successfully.", pipeline_name)
+
+
+# ----------------------------------------------------------------------------
+# traffic-light gate (data quality gatekeeping)
+# ----------------------------------------------------------------------------
+def _clear_flags():
+    """Remove stale traffic-light flags before a fresh data_prep run."""
+    for f in REPORTING.glob("*.flag"):
+        f.unlink(missing_ok=True)
+
+
+def _traffic_light_is_green() -> bool:
+    """Green when no *_FAIL.flag exists (data_unit_tests passed all suites)."""
+    return not any(REPORTING.glob("*_FAIL.flag"))
+
+
+# ----------------------------------------------------------------------------
+# one flow per Kedro composition
+# ----------------------------------------------------------------------------
+@flow(name="data_unit_tests")
 def flow_data_unit_tests():
-    """Run data unit tests only (nightly). Gatekeeper via traffic light.
-
-    TODO: _run("data_unit_tests")
-    """
-    raise NotImplementedError
+    run_kedro_task("data_unit_tests")
 
 
-@flow(name="flow_data_prep")
+@flow(name="data_prep")
 def flow_data_prep():
-    """ingestion + data_unit_tests + preprocessing_train + split_data.
-
-    TODO: _run("data_prep")  (only if traffic light is OK)
-    """
-    raise NotImplementedError
+    run_kedro_task("data_prep")
 
 
-@flow(name="flow_training")
+@flow(name="training")
 def flow_training():
-    """model_selection + model_train + feature_selection.
-
-    TODO: _run("training")
-    """
-    raise NotImplementedError
+    run_kedro_task("training")
 
 
-@flow(name="flow_inference")
+@flow(name="inference")
 def flow_inference():
-    """preprocessing_batch + model_predict.
-
-    TODO: _run("inference")
-    """
-    raise NotImplementedError
+    run_kedro_task("inference")
 
 
-@flow(name="flow_monitoring")
+@flow(name="monitoring")
 def flow_monitoring():
-    """data_drift (reference vs new batch).
-
-    TODO: _run("monitoring")
-    """
-    raise NotImplementedError
+    run_kedro_task("monitoring")
 
 
+# ----------------------------------------------------------------------------
+# orchestration flow: data_prep -> [traffic-light gate] -> training -> inference -> monitoring
+# ----------------------------------------------------------------------------
 @flow(name="full_pipeline")
 def full_pipeline():
-    """Full sequence (__default__).
+    logger = get_run_logger()
 
-    TODO: chain data_prep -> training -> inference -> monitoring -> reporting,
-          respecting the traffic light between data_unit_tests and the rest.
-    """
-    raise NotImplementedError
+    _clear_flags()
+    run_kedro_task("data_prep")  # includes data_unit_tests + writes the traffic-light flags
+
+    if not _traffic_light_is_green():
+        logger.error("Traffic light is RED — data quality gate failed; stopping before training.")
+        raise RuntimeError("Data quality gate failed (red traffic light).")
+    logger.info("Traffic light is GREEN — proceeding to training.")
+
+    run_kedro_task("training")
+    run_kedro_task("inference")
+    run_kedro_task("monitoring")
+    logger.info("Full pipeline finished.")
 
 
 if __name__ == "__main__":
-    # TODO: full_pipeline()
-    pass
+    # quick manual run (use full_pipeline() for the whole chain)
+    flow_data_prep()

@@ -1,11 +1,13 @@
-"""Scheduled Prefect deployments (cron). Copies the professor's example pattern.
+"""Scheduled Prefect deployments (cron). Mirrors the professor's bank_example pattern.
 
-TODO deployments:
-  - daily drift, weekly training, nightly data tests (see blueprint).
-  - use flow.to_deployment(name=..., cron=...) / serve(...) depending on the Prefect version.
+Run this file to register + serve the deployments; Prefect then triggers each flow on its
+schedule. Stop with Ctrl+C.
+
+    uv run python deployment_prefect.py
 """
 
-import logging
+from prefect import serve
+from prefect.client.schemas.schedules import CronSchedule
 
 from kedro_prefect_flow import (
     flow_data_unit_tests,
@@ -14,21 +16,32 @@ from kedro_prefect_flow import (
     full_pipeline,
 )
 
-logger = logging.getLogger(__name__)
-
-
-def deploy():
-    """Create/serve the scheduled deployments.
-
-    TODO deploy:
-      - nightly data tests:  cron "0 2 * * *"   -> flow_data_unit_tests
-      - daily drift:         cron "0 6 * * *"   -> flow_monitoring
-      - weekly training:     cron "0 3 * * 1"   -> flow_training
-      - full pipeline:       manual/on-demand    -> full_pipeline
-    """
-    # TODO: implement (flow.to_deployment(...) + serve(...))
-    raise NotImplementedError
-
-
 if __name__ == "__main__":
-    deploy()
+    print("Building deployments...")
+
+    # nightly data-quality tests (22:00)
+    dep_tests = flow_data_unit_tests.to_deployment(
+        name="data-tests-nightly",
+        schedule=CronSchedule(cron="0 22 * * *", timezone="Europe/Lisbon"),
+        tags=["data-quality"],
+    )
+
+    # daily drift monitoring (06:00)
+    dep_drift = flow_monitoring.to_deployment(
+        name="drift-daily",
+        schedule=CronSchedule(cron="0 6 * * *", timezone="Europe/Lisbon"),
+        tags=["monitoring"],
+    )
+
+    # weekly retraining (Mondays 06:00)
+    dep_train = flow_training.to_deployment(
+        name="training-weekly",
+        schedule=CronSchedule(cron="0 6 * * 1", timezone="Europe/Lisbon"),
+        tags=["training"],
+    )
+
+    # full pipeline — on demand (no schedule), with the traffic-light gate
+    dep_full = full_pipeline.to_deployment(name="full-pipeline-on-demand")
+
+    print("Serving deployments (Ctrl+C to stop)...")
+    serve(dep_tests, dep_drift, dep_train, dep_full)
