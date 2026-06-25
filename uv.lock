@@ -1525,11 +1525,13 @@ wheels = [
 
 [[package]]
 name = "hopsworks"
-version = "4.8.1"
+version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "avro" },
     { name = "boto3" },
+    { name = "build" },
+    { name = "click" },
     { name = "fsspec" },
     { name = "furl" },
     { name = "grpcio" },
@@ -1546,12 +1548,13 @@ dependencies = [
     { name = "pymysql", extra = ["rsa"] },
     { name = "requests" },
     { name = "retrying" },
+    { name = "tomli-w" },
     { name = "tqdm" },
     { name = "tzlocal" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/56/66/e99e522678788a61bfb0c68b7dcfb22cda554744fdc91243d6ae9bd40c5c/hopsworks-4.8.1.tar.gz", hash = "sha256:8b11829e9556e9c0cd4d623e5a87f039237a67a13e0098cec3fb37872d3d5c4b", size = 620541, upload-time = "2026-04-13T15:14:11.957Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d6/0b/ee95935ad90878888a70779ac137bd9ce9a1132170364e2a59e9fc57cdd4/hopsworks-5.0.0.tar.gz", hash = "sha256:23958b4e2e26019c66e3f56fe28285f1a0b174358e259e6971ade699062f5607", size = 838796, upload-time = "2026-06-10T13:17:22.914Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/30/5d/e4f2d86c6fb4521767f82454a46b9c19c3e95744d175e557f297b674f237/hopsworks-4.8.1-py3-none-any.whl", hash = "sha256:34985fb9aa5ebc5a97039c8a81f516baea4d33eba38f51c463688c98f91f60b3", size = 805931, upload-time = "2026-04-13T15:14:09.395Z" },
+    { url = "https://files.pythonhosted.org/packages/86/3a/766746835015c33d0b4f9db8d2a16206fa3c4602030546e70f31b32cc283/hopsworks-5.0.0-py3-none-any.whl", hash = "sha256:8c1672b8fb89f469063d8ada11deebc3c75d01e9d74b563708dc56c786c9257d", size = 1013411, upload-time = "2026-06-10T13:17:20.594Z" },
 ]
 
 [[package]]
@@ -2820,7 +2823,7 @@ requires-dist = [
     { name = "docker", specifier = ">=7.1.0" },
     { name = "evidently", specifier = ">=0.7.21" },
     { name = "great-expectations", specifier = ">=1.16.1" },
-    { name = "hopsworks", specifier = ">=4.8.1" },
+    { name = "hopsworks", specifier = "==5.0.0" },
     { name = "ipywidgets", specifier = ">=8.1.8" },
     { name = "jupyterlab", specifier = ">=4.5.6" },
     { name = "kedro", specifier = ">=1.3.1" },
