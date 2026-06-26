@@ -1,8 +1,6 @@
 # Config do train/test split.
 
 split_data:
-  strategy: random        # 'random' (baseline) | 'biased' (drift demo)
+  strategy: random       
   ref_frac: 0.8
   random_state: 42
-  bias_column: District
-  bias_district: Lisboa
