@@ -259,6 +259,10 @@ drift_report:                   # HTML from nannyml/evidently
   type: text.TextDataset
   filepath: data/08_reporting/data_drift_report.html
 
+final_report:                   # consolidated Markdown report (reporting pipeline)
+  type: text.TextDataset
+  filepath: data/08_reporting/final_report.md
+
 shap_plot:                      # MLflow artifact (Matplotlib)
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:

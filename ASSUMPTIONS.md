@@ -46,6 +46,10 @@ Data and model assumptions and key design decisions.
 - **Result:** champion = GradientBoosting — **validation R² ≈ 0.72**, **honest test R² ≈ 0.68**
   (on `test_data`). The EUR RMSE is inflated by heavy-tailed price outliers, so **R² and MAE**
   are the headline metrics.
+- **Reporting:** the `reporting` pipeline only **aggregates** existing artifacts (champion,
+  val/test metrics, GX traffic-light results, drift, SHAP) into a single Markdown file
+  (`data/08_reporting/final_report.md`) — it trains/computes nothing new. The SHAP section is
+  populated only when `shap_importance` exists (i.e. after the `explainability` pass).
 
 ## Limitations / risks (see also the report's "risks & mitigations")
 - **Pandas-only:** does not scale to much larger data -> Spark/Polars as mitigation.

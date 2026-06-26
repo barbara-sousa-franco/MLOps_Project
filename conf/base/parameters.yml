@@ -107,5 +107,6 @@ data_drift:
 
 # --- reporting ---------------------------------------------------------------
 reporting:
-  # TODO: consolidated report config
+  # consolidated Markdown report (build_report node)
   report_path: "data/08_reporting"
+  top_shap: 10            # number of top features to list from shap_importance

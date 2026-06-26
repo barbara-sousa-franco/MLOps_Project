@@ -18,6 +18,7 @@ from kedro_temp_mlops.pipelines.preprocessing_batch import create_pipeline as pr
 from kedro_temp_mlops.pipelines.model_selection import create_pipeline as model_selection
 from kedro_temp_mlops.pipelines.model_train import create_pipeline as model_train
 from kedro_temp_mlops.pipelines.preprocessing_train import create_pipeline as preprocessing
+from kedro_temp_mlops.pipelines.reporting import create_pipeline as reporting
 from kedro_temp_mlops.pipelines.split_data import create_pipeline as split_data
 from kedro_temp_mlops.pipelines.split_train_pipeline import create_pipeline as split_train
 
@@ -48,6 +49,7 @@ def register_pipelines() -> dict[str, Pipeline]:
     p_preprocessing_batch = preprocessing_batch()
     p_data_drift = data_drift()
     p_explainability = explainability()
+    p_reporting = reporting()
 
     # named compositions
     data_prep = (
@@ -78,10 +80,12 @@ def register_pipelines() -> dict[str, Pipeline]:
         "explainability": p_explainability,
         "model_predict": p_model_predict,
         "data_drift": p_data_drift,
+        "reporting": p_reporting,
         # named compositions
         "data_prep": data_prep,
         "training": training,
         "inference": inference,
         "monitoring": monitoring,
-        "__default__": data_prep + training + inference + monitoring,
+        "reporting_flow": p_reporting,
+        "__default__": data_prep + training + inference + monitoring + p_reporting,
     }

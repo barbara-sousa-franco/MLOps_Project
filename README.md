@@ -8,8 +8,9 @@ Optuna + SHAP + Great Expectations + Hopsworks (feature store) + evidently/nanny
 > Status: **functional end-to-end.** Implemented: data prep (Great Expectations + traffic
 > light), model selection (Optuna), model training (+ MLflow Model Registry), feature
 > selection (RFE), explainability (SHAP), inference (honest test on out-of-sample data),
-> drift monitoring (evidently), Hopsworks feature store, Docker, and Prefect orchestration.
-> Remaining: `reporting` pipeline + pytest. See [ASSUMPTIONS.md](ASSUMPTIONS.md).
+> drift monitoring (evidently), consolidated **reporting** (Markdown), Hopsworks feature
+> store, Docker, and Prefect orchestration. Remaining: pytest.
+> See [ASSUMPTIONS.md](ASSUMPTIONS.md).
 
 ## Setup
 
@@ -45,7 +46,8 @@ uv run kedro run --pipeline data_prep    # ingestion -> split_data -> preprocess
 uv run kedro run --pipeline training     # model_selection (Optuna) -> model_train (+ MLflow Registry)
 uv run kedro run --pipeline inference    # preprocessing_batch -> model_predict (honest test on test_data)
 uv run kedro run --pipeline monitoring   # data_drift (evidently)
-uv run kedro run                         # __default__ (data_prep + training + inference + monitoring)
+uv run kedro run --pipeline reporting    # build_report -> consolidated Markdown (data/08_reporting/final_report.md)
+uv run kedro run                         # __default__ (data_prep + training + inference + monitoring + reporting)
 
 # individual pipelines also run in isolation, e.g.:
 uv run kedro run --pipeline feature_selection   # RFE on the champion -> best_columns
@@ -54,6 +56,10 @@ uv run kedro run --pipeline explainability      # SHAP on the champion
 
 > Two-pass feature selection: run `training` (all features) -> `feature_selection` (RFE) ->
 > `training` again with `use_feature_selection: true` -> `explainability` (SHAP).
+
+> The `reporting` pipeline only AGGREGATES artifacts (champion, metrics, GX tests, drift,
+> SHAP) into `final_report.md` — it computes nothing new. The SHAP section is filled only if
+> `shap_importance` exists (run `explainability` first); otherwise it's marked _not available_.
 
 ### Hopsworks (feature store)
 `parameters.yml: ingestion.to_feature_store` controls the upload (**default `false`** so the
