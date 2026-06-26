@@ -1,52 +1,32 @@
 """Nodes for the `model_selection` pipeline.
 
-Regression model selection in two steps:
-  1. Challenger comparison — train each candidate model type with default params and
-     compare RMSE on the validation set.
-  2. Optuna tuning — tune the winning model type (direction="minimize" on RMSE), logging
-     each trial as a nested MLflow run.
+Two nodes:
+  1. compare_models — train each candidate with default params, pick the best type.
+  2. tune_model     — Optuna tuning of the winner on the RFE-selected features.
 
-SPLIT SEMANTICS (professor's bank-example scheme — names kept, roles clarified):
-  - `X_train` (from split_train) = training data → models are FIT here.
-  - `X_val` (from split_train) = VALIDATION set → used to tune and
-    select. It is LEAK-FREE (the transformers were fit on X_train and only `transform`ed
-    X_val), which is why all tuning/selection uses it.
-  - `test_data` (from split_data) = the true out-of-sample TEST set → the honest final
-    metric is computed there later (inference / Phase 3), not here.
-So the metrics logged here are VALIDATION metrics, not test metrics.
+SPLIT SEMANTICS:
+  - X_train / X_val: from split_train (val is VALIDATION, not test).
+  - test_data: true out-of-sample, evaluated in inference only.
 
-The target is `Price_log` (log1p of Price), so metrics are on the log scale and also
-inverted with expm1 to report RMSE/MAE in euros.
+Target is Price_log (log1p of Price); metrics are on the log scale.
 """
 
 import logging
-import os
-import pickle
 from datetime import datetime
 
 import mlflow
+import mlflow.sklearn
 import numpy as np
 import optuna
 import pandas as pd
 from lightgbm import LGBMRegressor
+from mlflow import MlflowClient
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
+from xgboost import XGBRegressor
 
 logger = logging.getLogger(__name__)
 
-_BEST_COLUMNS_PATH = os.path.join("data", "06_models", "best_cols.pkl")
-
-
-def _load_best_columns() -> list | None:
-    try:
-        with open(_BEST_COLUMNS_PATH, "rb") as f:
-            return pickle.load(f)
-    except FileNotFoundError:
-        return None
-
-
-# Candidate model registry: name (from parameters) -> sklearn estimator class.
 _MODELS = {
     "RandomForestRegressor": RandomForestRegressor,
     "GradientBoostingRegressor": GradientBoostingRegressor,
@@ -56,15 +36,10 @@ _MODELS = {
 
 
 def _as_1d(y) -> np.ndarray:
-    """Coerce a target (DataFrame/Series/array) into a 1-D numpy array."""
     return np.asarray(y).ravel()
 
 
 def _build_model(name: str, params: dict, random_state: int):
-    """Instantiate a candidate model by name with the given hyperparameters.
-
-    Adds `random_state` for reproducibility and `n_jobs=-1` where supported (RandomForest).
-    """
     if name not in _MODELS:
         raise ValueError(f"Unknown candidate model: {name!r} (known: {list(_MODELS)})")
     kwargs = dict(params, random_state=random_state)
@@ -74,10 +49,6 @@ def _build_model(name: str, params: dict, random_state: int):
 
 
 def _suggest(trial: "optuna.Trial", name: str, spec: dict):
-    """Suggest one hyperparameter from a search-space spec.
-
-    Integer spec -> suggest_int (honours `step`); otherwise -> suggest_float (honours `log`).
-    """
     low, high = spec["low"], spec["high"]
     is_int = isinstance(low, int) and isinstance(high, int) and not spec.get("log", False)
     if is_int:
@@ -86,7 +57,6 @@ def _suggest(trial: "optuna.Trial", name: str, spec: dict):
 
 
 def _evaluate(model, X, y_true) -> dict:
-    """Compute regression metrics on the log scale and inverted to euros."""
     pred_log = model.predict(X)
     y_log = _as_1d(y_true)
     pred_eur, y_eur = np.expm1(pred_log), np.expm1(y_log)
@@ -99,65 +69,113 @@ def _evaluate(model, X, y_true) -> dict:
     }
 
 
-def model_selection(
+def _register_pass1(model, name: str, rmse: float, run_id: str, model_name: str):
+    """Log and register a pass1 model in the MLflow Model Registry (no alias)."""
+    client = MlflowClient()
+    try:
+        client.get_registered_model(model_name)
+    except mlflow.exceptions.MlflowException:
+        client.create_registered_model(model_name)
+
+    mlflow.sklearn.log_model(model, artifact_path=f"pass1_{name}")
+    model_uri = f"runs:/{run_id}/pass1_{name}"
+    mv = mlflow.register_model(model_uri=model_uri, name=model_name)
+    client.set_model_version_tag(model_name, mv.version, "pass", "pass1")
+    client.set_model_version_tag(model_name, mv.version, "model_type", name)
+    client.set_model_version_tag(model_name, mv.version, "val_rmse_log", f"{rmse:.6f}")
+    logger.info("  Registered %s pass1 → version %s (RMSE=%.4f)", name, mv.version, rmse)
+
+
+def compare_models(
     X_train: pd.DataFrame,
     X_val: pd.DataFrame,
     y_train: pd.DataFrame,
     y_val: pd.DataFrame,
     parameters: dict,
-    champion_dict: dict | None = None,
-    champion_model=None,
 ):
-    """Compare challengers, tune the best one with Optuna and return the selected model.
+    """Train all candidate models with default params, register all as pass1, return best.
 
-    Models are FIT on `X_train` and tuned/selected on `X_val` (leak-free validation set).
-    If use_feature_selection=true and best_cols.pkl exists, restricts to those features.
+    All 4 models are logged to the MLflow Model Registry with tag pass=pass1 (no alias).
+    The best model (lowest val RMSE) is returned to flow into feature_selection → tune_model.
 
     Returns:
-        selected_model — the tuned best model, refit on X_train.
+        best_model — fitted model of the winning type (default params, all features).
     """
-    use_fs = parameters.get("use_feature_selection", False)
-    if use_fs:
-        best_columns = _load_best_columns()
-        if best_columns:
-            X_train = X_train[best_columns]
-            X_val = X_val[best_columns]
-            logger.info("Using %d selected features from feature_selection.", len(best_columns))
-
     random_state = parameters.get("random_state", 42)
-    n_trials = parameters.get("n_trials", 30)
     candidates = parameters["candidates"]
-    search_spaces = parameters["search_spaces"]
+    registry_cfg = parameters.get("registry", {})
+    model_name = registry_cfg.get("model_name", "house_price_model")
 
-    y_train = _as_1d(y_train)
-    y_val = _as_1d(y_val)
-    use_mlflow = mlflow.active_run() is not None
+    y_train_arr = _as_1d(y_train)
+    y_val_arr = _as_1d(y_val)
+    active_run = mlflow.active_run()
+    use_mlflow = active_run is not None
 
-    # ---- STEP 1: compare candidate model types (default params) ----------------
-    # Fit on X_train, evaluate on the leak-free validation set (X_val).
-    logger.info("STEP 1 — comparing %d candidate model type(s)...", len(candidates))
+    logger.info("Comparing %d candidate model type(s) with default params...", len(candidates))
     val_rmse_by_candidate: dict[str, float] = {}
+    fitted_models: dict[str, object] = {}
+
     for name in candidates:
         model = _build_model(name, {}, random_state)
-        model.fit(X_train, y_train)
-        rmse = float(root_mean_squared_error(y_val, model.predict(X_val)))
+        model.fit(X_train, y_train_arr)
+        rmse = float(root_mean_squared_error(y_val_arr, model.predict(X_val)))
         val_rmse_by_candidate[name] = rmse
+        fitted_models[name] = model
         logger.info("  %s: validation RMSE(log) = %.4f", name, rmse)
         if use_mlflow:
             mlflow.log_metric(f"candidate_val_rmse_{name}", rmse)
+            _register_pass1(model, name, rmse, active_run.info.run_id, model_name)
 
     best_name = min(val_rmse_by_candidate, key=val_rmse_by_candidate.get)
-    logger.info("Best candidate type: %s", best_name)
+    logger.info("Best candidate: %s (RMSE=%.4f)", best_name, val_rmse_by_candidate[best_name])
 
-    # ---- STEP 2: Optuna tuning of the winning model type -----------------------
-    logger.info("STEP 2 — Optuna tuning of %s (%d trials)...", best_name, n_trials)
-    space = search_spaces[best_name]
+    if use_mlflow:
+        mlflow.log_param("best_model_type", best_name)
+
+    return fitted_models[best_name]
+
+
+def tune_model(
+    X_train: pd.DataFrame,
+    X_val: pd.DataFrame,
+    y_train: pd.DataFrame,
+    y_val: pd.DataFrame,
+    best_model,
+    best_columns: list,
+    parameters: dict,
+):
+    """Optuna tuning of the champion model type on the RFE-selected features.
+
+    Args:
+        best_model:   fitted model from compare_models (used to get the model type).
+        best_columns: feature list from feature_selection (RFE output).
+
+    Returns:
+        selected_model — tuned model refit on X_train[best_columns].
+    """
+    best_name = type(best_model).__name__
+    random_state = parameters.get("random_state", 42)
+    n_trials = parameters.get("n_trials", 30)
+    search_spaces = parameters["search_spaces"]
+
+    X_train_fs = X_train[best_columns]
+    X_val_fs = X_val[best_columns]
+    y_train_arr = _as_1d(y_train)
+    y_val_arr = _as_1d(y_val)
+
+    logger.info(
+        "Optuna tuning of %s on %d selected features (%d trials)...",
+        best_name, len(best_columns), n_trials,
+    )
+
+    use_mlflow = mlflow.active_run() is not None
+    space = search_spaces.get(best_name, {})
 
     def objective(trial: "optuna.Trial") -> float:
         trial_params = {p: _suggest(trial, p, spec) for p, spec in space.items()}
         model = _build_model(best_name, trial_params, random_state)
-        model.fit(X_train, y_train)
-        rmse = float(root_mean_squared_error(y_val, model.predict(X_val)))
+        model.fit(X_train_fs, y_train_arr)
+        rmse = float(root_mean_squared_error(y_val_arr, model.predict(X_val_fs)))
         if use_mlflow:
             with mlflow.start_run(nested=True, run_name=f"trial_{trial.number}"):
                 mlflow.log_params(trial_params)
@@ -170,44 +188,29 @@ def model_selection(
     )
     study.optimize(objective, n_trials=n_trials)
 
-    # Guard: never ship a tuned model that is worse than the default baseline.
-    default_val_rmse = val_rmse_by_candidate[best_name]
-    if study.best_value <= default_val_rmse:
+    default_rmse = float(root_mean_squared_error(y_val_arr, best_model.predict(X_val) if hasattr(best_model, "predict") else [0]*len(y_val_arr)))
+    if study.best_value <= default_rmse:
         best_params = study.best_params
-        logger.info("Best params: %s (validation RMSE(log) = %.4f)", best_params, study.best_value)
+        logger.info("Best params: %s (RMSE=%.4f)", best_params, study.best_value)
     else:
         best_params = {}
-        logger.info(
-            "Tuning did not beat the default (%.4f vs default %.4f) — keeping default params. "
-            "Consider more n_trials or a wider search space.",
-            study.best_value, default_val_rmse,
-        )
+        logger.info("Tuning did not beat default — keeping default params.")
 
-    # ---- STEP 3: refit best model on X_train, evaluate on the VALIDATION set ----
     selected_model = _build_model(best_name, best_params, random_state)
-    selected_model.fit(X_train, y_train)
-    metrics = _evaluate(selected_model, X_val, y_val)
+    selected_model.fit(X_train_fs, y_train_arr)
+    metrics = _evaluate(selected_model, X_val_fs, y_val_arr)
+
     logger.info(
-        "Selected %s | val RMSE(log)=%.4f, R2=%.4f | val RMSE=%.0f EUR, MAE=%.0f EUR",
+        "Tuned %s | val RMSE(log)=%.4f, R2=%.4f | RMSE=%.0f EUR, MAE=%.0f EUR",
         best_name, metrics["rmse_log"], metrics["r2"], metrics["rmse_eur"], metrics["mae_eur"],
     )
 
     if use_mlflow:
-        phase = "fs" if use_fs else "baseline"
         timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-        mlflow.set_tag("mlflow.runName", f"{best_name}_{phase}_{timestamp}")
+        mlflow.set_tag("mlflow.runName", f"{best_name}_tuned_{timestamp}")
         mlflow.log_param("selected_model_type", best_name)
+        mlflow.log_param("n_features_selected", len(best_columns))
         mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
         mlflow.log_metrics({f"val_{k}": v for k, v in metrics.items()})
-
-    # ---- Optional: keep the current champion if it is still better -------------
-    if champion_model is not None and champion_dict is not None:
-        champion_rmse = champion_dict.get("val_rmse_log", float("inf"))
-        if champion_rmse <= metrics["rmse_log"]:
-            logger.info(
-                "Champion RMSE(log)=%.4f <= challenger %.4f — keeping champion.",
-                champion_rmse, metrics["rmse_log"],
-            )
-            return champion_model
 
     return selected_model

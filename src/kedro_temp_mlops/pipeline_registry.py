@@ -30,11 +30,8 @@ def register_pipelines() -> dict[str, Pipeline]:
         ingestion -> split_data -> preprocessing (clean) -> split_train
         -> preproc_after_split (impute/cap/encode/scale) -> data_unit_tests
 
-    Training flow (two-pass):
-        Pass 1: kedro run --pipeline training            (all features)
-        Pass 2: kedro run --pipeline feature_selection   (RFE on champion → best_columns)
-        Pass 3: kedro run --pipeline training            (use_feature_selection: true)
-        Pass 4: kedro run --pipeline explainability      (SHAP on final champion)
+    Training flow (single pass):
+        compare_models → feature_selection (RFE) → tune_model (Optuna) → model_train → explainability
     """
     p_ingestion = ingestion()
     p_split_data = split_data()
@@ -60,7 +57,8 @@ def register_pipelines() -> dict[str, Pipeline]:
         + p_preproc_after_split
         + p_data_unit_tests
     )
-    training = p_model_selection + p_model_train   # Pass 1: all features; Pass 2: best_columns (use_feature_selection: true)
+    # single-pass: compare → feature_selection (RFE) → tune → train
+    training = p_model_selection + p_feature_selection + p_model_train
     # Phase 3: preprocess the out-of-sample batch (test_data) with the train-fitted
     # transformers, then predict + evaluate the HONEST test metric with the champion.
     inference = p_preprocessing_batch + p_model_predict

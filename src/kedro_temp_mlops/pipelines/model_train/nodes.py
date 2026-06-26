@@ -63,24 +63,20 @@ def model_train(
     y_val: pd.Series,
     parameters: dict,
     selected_model=None,
+    best_columns: list | None = None,
 ):
-    """Train the champion, evaluate on the validation set, return model + metrics.
+    """Evaluate the tuned model against the baseline and return model + metrics.
 
-    If use_feature_selection=true and best_cols.pkl exists (from feature_selection
-    pipeline), restricts features to those columns before training.
+    The selected_model comes from tune_model (already tuned on best_columns).
+    best_columns are used to restrict X_train/X_val to the same feature set.
 
     Returns:
         Tuple (production_model, production_columns, production_model_metrics).
     """
-    use_fs = parameters.get("use_feature_selection", False)
-    if use_fs:
-        best_columns = _load_best_columns()
-        if best_columns:
-            X_train = X_train[best_columns]
-            X_val = X_val[best_columns]
-            logger.info("Using %d selected features.", len(best_columns))
-        else:
-            logger.warning("use_feature_selection=true but best_cols.pkl not found — using all features.")
+    if best_columns:
+        X_train = X_train[best_columns]
+        X_val = X_val[best_columns]
+        logger.info("Using %d selected features.", len(best_columns))
 
     production_columns = list(X_train.columns)
 
@@ -112,7 +108,6 @@ def model_train(
     if use_mlflow:
         mlflow.log_metrics({f"val_{k}": v for k, v in candidate_metrics.items()})
         mlflow.log_metrics({f"baseline_{k}": v for k, v in baseline_metrics.items()})
-        mlflow.log_param("use_feature_selection", use_fs)
 
     production_model_metrics = {
         **{f"val_{k}": v for k, v in candidate_metrics.items()},
@@ -123,11 +118,13 @@ def model_train(
 
 
 def register_model(model, metrics: dict, parameters: dict):
-    """Register the trained model in the MLflow Model Registry with champion/challenger logic.
+    """Register the tuned model (pass2) in the MLflow Model Registry.
 
-    - New model always enters as 'challenger'.
-    - If it beats the current 'champion' (lower val_rmse) → promoted to 'champion'.
-    - If no champion exists yet → promoted directly.
+    Logic:
+    - pass2 is always registered with tag pass=pass2.
+    - If no @champion exists yet → this version becomes @champion.
+    - If @champion exists → this version enters as @challenger.
+      If its RMSE beats the champion → it is promoted to @champion.
     """
     registry_cfg = parameters.get("registry", {})
     model_name = registry_cfg.get("model_name", "house_price_model")
@@ -135,7 +132,6 @@ def register_model(model, metrics: dict, parameters: dict):
     champion_alias = registry_cfg.get("champion_alias", "champion")
 
     client = MlflowClient()
-
     try:
         client.get_registered_model(model_name)
     except mlflow.exceptions.MlflowException:
@@ -147,41 +143,44 @@ def register_model(model, metrics: dict, parameters: dict):
         raise RuntimeError("register_model must be called inside an active MLflow run.")
 
     run_id = active_run.info.run_id
-    mlflow.sklearn.log_model(model, artifact_path="model")
-    model_uri = f"runs:/{run_id}/model"
+    model_type = type(model).__name__
 
+    mlflow.sklearn.log_model(model, artifact_path="pass2_model")
+    model_uri = f"runs:/{run_id}/pass2_model"
     mv = mlflow.register_model(model_uri=model_uri, name=model_name)
-    logger.info("Registered '%s' version %s", model_name, mv.version)
+    client.set_model_version_tag(model_name, mv.version, "pass", "pass2")
+    client.set_model_version_tag(model_name, mv.version, "model_type", model_type)
 
     new_rmse = metrics.get("val_rmse")
-    promoted = False
+    if new_rmse is not None:
+        client.set_model_version_tag(model_name, mv.version, "val_rmse", f"{new_rmse:.6f}")
 
+    logger.info("Registered %s pass2 → version %s (RMSE=%s)", model_type, mv.version, new_rmse)
+
+    promoted = False
     try:
         champion_mv = client.get_model_version_by_alias(model_name, champion_alias)
-        champion_run = client.get_run(champion_mv.run_id)
-        champion_rmse = champion_run.data.metrics.get("val_rmse")
+        champion_rmse_tag = champion_mv.tags.get("val_rmse")
+        champion_rmse = float(champion_rmse_tag) if champion_rmse_tag else None
 
         if champion_rmse is not None and new_rmse is not None:
             logger.info("Champion RMSE=%.4f  vs  Challenger RMSE=%.4f", champion_rmse, new_rmse)
             if new_rmse < champion_rmse:
-                # new model becomes champion; old champion becomes challenger
                 client.set_registered_model_alias(model_name, champion_alias, mv.version)
                 client.set_registered_model_alias(model_name, challenger_alias, champion_mv.version)
-                logger.info("Challenger promoted to champion (version %s)", mv.version)
+                logger.info("New model promoted to @champion (version %s)", mv.version)
                 promoted = True
             else:
-                # new model stays as challenger; champion retained
                 client.set_registered_model_alias(model_name, challenger_alias, mv.version)
-                logger.info("Champion retained (version %s)", champion_mv.version)
+                logger.info("@champion retained (version %s) — new model is @challenger", champion_mv.version)
         else:
-            logger.warning("Could not compare RMSEs — promoting challenger by default.")
             client.set_registered_model_alias(model_name, champion_alias, mv.version)
             promoted = True
 
     except mlflow.exceptions.MlflowException:
-        # no champion yet — first model becomes champion directly
+        # no champion yet — first pass2 becomes champion
         client.set_registered_model_alias(model_name, champion_alias, mv.version)
-        logger.info("No existing champion — version %s promoted directly.", mv.version)
+        logger.info("No existing @champion — version %s promoted directly.", mv.version)
         promoted = True
 
     return {

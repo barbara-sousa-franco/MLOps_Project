@@ -1,23 +1,15 @@
-"""Pipeline `model_selection`."""
+"""Pipeline `model_selection` — two nodes: compare then tune."""
 
 from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import model_selection
+from .nodes import compare_models, tune_model
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Create the model-selection pipeline. outputs: `selected_model`.
-
-    Note: `champion_dict`/`champion_model` (state from previous runs) are optional node
-    parameters and are NOT wired here — load them from the registry/artifact inside the
-    node when they exist. Keeps the graph acyclic (model_selection -> model_train).
-    """
     return pipeline(
         [
             node(
-                func=model_selection,
-                # X_*_scaled = final 05_model_input layer (impute->cap->encode->scale);
-                # X_val_* = leak-free VALIDATION set; target = log-y from split_train
+                func=compare_models,
                 inputs=[
                     "X_train_scaled",
                     "X_val_scaled",
@@ -25,8 +17,22 @@ def create_pipeline(**kwargs) -> Pipeline:
                     "y_val_data",
                     "params:model_selection",
                 ],
+                outputs="best_model",
+                name="compare_models_node",
+            ),
+            node(
+                func=tune_model,
+                inputs=[
+                    "X_train_scaled",
+                    "X_val_scaled",
+                    "y_train_data",
+                    "y_val_data",
+                    "best_model",
+                    "best_columns",
+                    "params:model_selection",
+                ],
                 outputs="selected_model",
-                name="model_selection_node",
+                name="tune_model_node",
             ),
         ]
     )

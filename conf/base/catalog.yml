@@ -227,7 +227,11 @@ scaler:
   filepath: data/04_feature/scaler.pkl
 
 # --- 06_models ----------------------------------------------------------------
-selected_model:                 # MLflow artifact (Pickle) — best model from model_selection
+best_model:                     # winning model type from compare_models (default params, all features)
+  type: pickle.PickleDataset
+  filepath: data/06_models/best_model.pkl
+
+selected_model:                 # MLflow artifact (Pickle) — tuned model from tune_model
   type: kedro_mlflow.io.artifacts.MlflowArtifactDataset
   dataset:
     type: pickle.PickleDataset

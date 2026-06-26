@@ -1,6 +1,11 @@
 # Candidate models (challengers) + Optuna search spaces.
 
 model_selection:
+  registry:
+    model_name: house_price_model
+    champion_alias: champion
+    challenger_alias: challenger
+
   metric: "rmse"             # rmse | mae | r2
   direction: "minimize"      # ⚠️ lower RMSE is better -> minimize
   n_trials: 30               # TODO: more trials = better model but slower (trade-off in the report)
