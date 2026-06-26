@@ -10,10 +10,10 @@ model_selection:
 
   # STEP 1 — challengers: model types to compare
   candidates:
-    # - RandomForestRegressor
+      - RandomForestRegressor
       - GradientBoostingRegressor
-    # - XGBRegressor          # optional
-    #  - LGBMRegressor         # optional
+      - XGBRegressor          
+      - LGBMRegressor        
 
   # STEP 2 — Optuna search spaces per model (TODO: tune)
   search_spaces:

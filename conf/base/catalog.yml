@@ -21,18 +21,39 @@ ingested_data:
   filepath: data/02_intermediate/ingested_data.csv
   load_args:
     low_memory: false           # mixed types (many nulls) -> avoids DtypeWarning
+    encoding: utf-8
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 learning_data:                  # reference for drift (training distribution)
   type: pandas.CSVDataset
   filepath: data/02_intermediate/learning_data.csv
   load_args:
     low_memory: false
+    encoding: utf-8
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 test_data:                      # true out-of-sample test set for drift / inference
   type: pandas.CSVDataset
   filepath: data/02_intermediate/test_data.csv
   load_args:
     low_memory: false
+    encoding: utf-8
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 cleaned_data:
   type: pandas.CSVDataset
@@ -43,7 +64,10 @@ cleaned_data:
     # which broke the GX District distinct-values check in data_unit_tests.
   save_args:
     index: false
-    encoding: utf-8
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
  
 reporting_data_preprocessing:
   type: json.JSONDataset
@@ -53,10 +77,26 @@ reporting_data_preprocessing:
 preprocessed_training_data:
   type: pandas.CSVDataset
   filepath: data/03_primary/preprocessed_train_data.csv
+  load_args:
+    encoding: utf-8
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 preprocessed_batch_data:
   type: pandas.CSVDataset
   filepath: data/03_primary/preprocessed_batch_data.csv
+  load_args:
+    encoding: utf-8
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 X_train_data:
   type: pandas.CSVDataset
@@ -221,6 +261,14 @@ production_model:               # MLflow artifact (Pickle) — the champion
 predictions:
   type: pandas.CSVDataset
   filepath: data/07_model_output/predictions.csv
+  load_args:
+    encoding: utf-8
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 # --- 08_reporting -------------------------------------------------------------
 production_test_metrics:        # HONEST test metrics on the out-of-sample batch (test_data)
@@ -232,14 +280,32 @@ production_test_metrics:        # HONEST test metrics on the out-of-sample batch
 reporting_tests:                # data unit test results (GX)
   type: pandas.CSVDataset
   filepath: data/08_reporting/data_tests.csv
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 reporting_tests_cleaned:
   type: pandas.CSVDataset
   filepath: data/08_reporting/validation_cleaned_data.csv
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 reporting_tests_model_input:
   type: pandas.CSVDataset
   filepath: data/08_reporting/validation_model_input.csv
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 traffic_light_flag:
   type: text.TextDataset
@@ -254,6 +320,12 @@ production_model_metrics:       # MLflow artifact (JSON) — RMSE/MAE/R²
 drift_result:
   type: pandas.CSVDataset
   filepath: data/08_reporting/drift_result.csv
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 drift_report:                   # HTML from nannyml/evidently
   type: text.TextDataset
@@ -276,6 +348,12 @@ shap_values:
 shap_importance:
   type: pandas.CSVDataset
   filepath: data/08_reporting/shap_importance.csv
+  save_args:
+    index: false
+  fs_args:
+    open_args_save:
+      mode: "w"
+      encoding: "utf-8"
 
 # NOTE: `best_columns` is defined once above (06_models, MLflow artifact) — duplicate removed.
 # NOTE: removed orphan datasets from the old champion/challenger feature_selection
