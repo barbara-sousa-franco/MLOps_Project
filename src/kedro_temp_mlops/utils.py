@@ -142,7 +142,7 @@ def upload_engineered_to_fs(X_train_scaled, y_train_data, parameters):
     df = X_train_scaled.copy().reset_index(names="index")
     df["Price_log"] = y_train_data.values
     to_feature_store(
-        data=df, group_name="house_engineered_train", feature_group_version=2,
+        data=df, group_name="cleaned_after_split", feature_group_version=2,
         description="Feature-engineered + scaled TRAIN data (fitted on train split)",
         group_description=[], credentials_input=credentials["hopsworks"],
     )
