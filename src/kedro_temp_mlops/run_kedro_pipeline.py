@@ -17,12 +17,12 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-def run_pipeline(pipeline_name: str = "__default__"):
+def run_pipeline(pipeline_name: str = "__default__", extra_params: dict | None = None):
     """Run a Kedro pipeline by name inside a KedroSession.
 
     Args:
-        pipeline_name: a name registered in pipeline_registry (e.g. "data_prep", "training",
-            "inference", "monitoring", "__default__").
+        pipeline_name: a name registered in pipeline_registry (e.g. "data_prep", "training").
+        extra_params: optional parameter overrides (e.g. {"model_train.use_feature_selection": True}).
 
     Returns:
         The output of session.run().
@@ -31,5 +31,5 @@ def run_pipeline(pipeline_name: str = "__default__"):
     os.chdir(PROJECT_ROOT)
     bootstrap_project(PROJECT_ROOT)
     logger.info("Running Kedro pipeline '%s'...", pipeline_name)
-    with KedroSession.create(project_path=PROJECT_ROOT) as session:
+    with KedroSession.create(project_path=PROJECT_ROOT, runtime_params=extra_params) as session:
         return session.run(pipeline_name=pipeline_name)

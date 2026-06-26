@@ -44,7 +44,7 @@ tracking:
 
   run:
     id: null # if `id` is None, a new run will be created
-    name: "GB_shap" # if `name` is None, pipeline name will be used for the run name. You can use "${km.random_name:}" to generate a random name (mlflow's default)
+    name: null # set dynamically in each node (e.g. GradientBoosting_baseline_20260626)
     nested: True  # if `nested` is False, you won't be able to launch sub-runs inside your nodes
 
   params:

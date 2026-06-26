@@ -23,11 +23,11 @@ REPORTING = PROJECT_ROOT / "data" / "08_reporting"
 # task: run one Kedro pipeline
 # ----------------------------------------------------------------------------
 @task(retries=1, retry_delay_seconds=10)
-def run_kedro_task(pipeline_name: str):
+def run_kedro_task(pipeline_name: str, extra_params: dict | None = None):
     """Run a Kedro pipeline by name (with a retry on transient failure)."""
     logger = get_run_logger()
     logger.info("Running Kedro pipeline: %s", pipeline_name)
-    run_pipeline(pipeline_name)
+    run_pipeline(pipeline_name, extra_params=extra_params)
     logger.info("Kedro pipeline '%s' finished successfully.", pipeline_name)
 
 
@@ -73,8 +73,26 @@ def flow_monitoring():
     run_kedro_task("monitoring")
 
 
+@flow(name="feature_selection")
+def flow_feature_selection():
+    run_kedro_task("feature_selection")
+
+
+@flow(name="explainability")
+def flow_explainability():
+    run_kedro_task("explainability")
+
+
+@flow(name="reporting")
+def flow_reporting():
+    run_kedro_task("reporting")
+
+
 # ----------------------------------------------------------------------------
-# orchestration flow: data_prep -> [traffic-light gate] -> training -> inference -> monitoring
+# orchestration flow: full two-pass training with feature selection, SHAP and reporting
+# data_prep -> [traffic-light gate] -> training (pass 1) -> feature_selection
+# -> training (pass 2, with best features) -> inference -> monitoring
+# -> explainability (SHAP) -> reporting
 # ----------------------------------------------------------------------------
 @flow(name="full_pipeline")
 def full_pipeline():
@@ -88,9 +106,24 @@ def full_pipeline():
         raise RuntimeError("Data quality gate failed (red traffic light).")
     logger.info("Traffic light is GREEN — proceeding to training.")
 
-    run_kedro_task("training")
+    # pass 1: train on all features
+    run_kedro_task("training", extra_params={"model_train": {"use_feature_selection": False}})
+
+    # RFE → best_columns saved to data/06_models/best_cols.pkl
+    run_kedro_task("feature_selection")
+
+    # pass 2: retrain with best_columns
+    run_kedro_task("training", extra_params={"model_train": {"use_feature_selection": True}})
+
     run_kedro_task("inference")
     run_kedro_task("monitoring")
+
+    # SHAP on final champion
+    run_kedro_task("explainability")
+
+    # consolidated Markdown report
+    run_kedro_task("reporting")
+
     logger.info("Full pipeline finished.")
 
 

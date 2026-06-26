@@ -22,12 +22,15 @@ inverted with expm1 to report RMSE/MAE in euros.
 import logging
 import os
 import pickle
+from datetime import datetime
 
 import mlflow
 import numpy as np
 import optuna
 import pandas as pd
+from lightgbm import LGBMRegressor
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, r2_score, root_mean_squared_error
 
 logger = logging.getLogger(__name__)
@@ -47,22 +50,9 @@ def _load_best_columns() -> list | None:
 _MODELS = {
     "RandomForestRegressor": RandomForestRegressor,
     "GradientBoostingRegressor": GradientBoostingRegressor,
+    "XGBRegressor": XGBRegressor,
+    "LGBMRegressor": LGBMRegressor,
 }
-
-# Optional gradient-boosting libraries (XGBoost / LightGBM). They need system deps
-# (e.g. libomp on macOS), so import them LAZILY — a missing/broken install just disables
-# that candidate instead of breaking the whole project at import time.
-try:
-    from xgboost import XGBRegressor
-    _MODELS["XGBRegressor"] = XGBRegressor
-except Exception as exc:  # noqa: BLE001
-    logger.warning("XGBoost unavailable — XGBRegressor candidate disabled (%s).", exc)
-
-try:
-    from lightgbm import LGBMRegressor
-    _MODELS["LGBMRegressor"] = LGBMRegressor
-except Exception as exc:  # noqa: BLE001
-    logger.warning("LightGBM unavailable (needs libomp on macOS) — LGBMRegressor disabled (%s).", exc)
 
 
 def _as_1d(y) -> np.ndarray:
@@ -203,6 +193,9 @@ def model_selection(
     )
 
     if use_mlflow:
+        phase = "fs" if use_fs else "baseline"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+        mlflow.set_tag("mlflow.runName", f"{best_name}_{phase}_{timestamp}")
         mlflow.log_param("selected_model_type", best_name)
         mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
         mlflow.log_metrics({f"val_{k}": v for k, v in metrics.items()})

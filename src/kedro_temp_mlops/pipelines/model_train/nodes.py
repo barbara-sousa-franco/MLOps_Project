@@ -153,9 +153,6 @@ def register_model(model, metrics: dict, parameters: dict):
     mv = mlflow.register_model(model_uri=model_uri, name=model_name)
     logger.info("Registered '%s' version %s", model_name, mv.version)
 
-    client.set_registered_model_alias(model_name, challenger_alias, mv.version)
-    logger.info("Tagged version %s as '%s'", mv.version, challenger_alias)
-
     new_rmse = metrics.get("val_rmse")
     promoted = False
 
@@ -167,10 +164,14 @@ def register_model(model, metrics: dict, parameters: dict):
         if champion_rmse is not None and new_rmse is not None:
             logger.info("Champion RMSE=%.4f  vs  Challenger RMSE=%.4f", champion_rmse, new_rmse)
             if new_rmse < champion_rmse:
+                # new model becomes champion; old champion becomes challenger
                 client.set_registered_model_alias(model_name, champion_alias, mv.version)
+                client.set_registered_model_alias(model_name, challenger_alias, champion_mv.version)
                 logger.info("Challenger promoted to champion (version %s)", mv.version)
                 promoted = True
             else:
+                # new model stays as challenger; champion retained
+                client.set_registered_model_alias(model_name, challenger_alias, mv.version)
                 logger.info("Champion retained (version %s)", champion_mv.version)
         else:
             logger.warning("Could not compare RMSEs — promoting challenger by default.")
@@ -178,6 +179,7 @@ def register_model(model, metrics: dict, parameters: dict):
             promoted = True
 
     except mlflow.exceptions.MlflowException:
+        # no champion yet — first model becomes champion directly
         client.set_registered_model_alias(model_name, champion_alias, mv.version)
         logger.info("No existing champion — version %s promoted directly.", mv.version)
         promoted = True

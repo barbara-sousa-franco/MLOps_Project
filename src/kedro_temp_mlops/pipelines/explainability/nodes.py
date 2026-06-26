@@ -14,6 +14,7 @@ import logging
 import os
 import pickle
 import tempfile
+from datetime import datetime
 
 import mlflow
 import pandas as pd
@@ -52,6 +53,10 @@ def compute_shap(
         pickle.dump(explainer, f)
 
     use_mlflow = mlflow.active_run() is not None
+    if use_mlflow:
+        model_type = type(production_model).__name__
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+        mlflow.set_tag("mlflow.runName", f"{model_type}_shap_{timestamp}")
     if use_mlflow:
         with tempfile.TemporaryDirectory() as tmp:
             explainer_path = os.path.join(tmp, "shap_explainer.pkl")
