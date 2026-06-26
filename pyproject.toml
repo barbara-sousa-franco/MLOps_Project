@@ -27,6 +27,8 @@ dependencies = [
     # --- opcionais (descomentar conforme a escolha da equipa) ---
     # "nannyml>=0.12",             # alternativa/complemento ao evidently p/ drift
     # "pandera>=0.20",             # validação de schema (blueprint), além do Great Expectations
+    "lightgbm>=4.6.0",
+    "xgboost>=3.3.0",
 ]
 # TODO: depois de mexer aqui, re-gerar o lock e o requirements.txt:
 #   uv lock && uv export --format requirements-txt -o requirements.txt
