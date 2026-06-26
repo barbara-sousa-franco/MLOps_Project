@@ -116,4 +116,4 @@ def full_pipeline():
 
 
 if __name__ == "__main__":
-    flow_data_prep()
+    full_pipeline()
