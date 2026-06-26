@@ -1,0 +1,110 @@
+data_unit_tests_cleaned:
+  dropped_columns:
+    - PublishDate
+    - Floor
+    - ConservationStatus
+    - EnergyEfficiencyLevel
+    - City
+    - Town
+  row_count:
+    min: 1
+    max: 1000
+  not_null_columns:
+    - Price_log
+    - District
+  column_types:
+    Price_log: float64
+    LivingArea_log: float64
+    TotalArea_log: float64
+    GrossArea_log: float64
+    BuiltArea_log: float64
+    LotSize_log: float64
+    Parking: float64
+    TotalRooms: float64
+    NumberOfBedrooms: float64
+    NumberOfBathrooms: float64
+    NumberOfWC: float64
+    ConstructionYear: float64
+    EnergyCertificate: int64
+    Garage: float64
+    Elevator: float64
+    ElectricCarsCharging: float64
+    HasParking: float64
+    District: object
+    Type: object
+  ranges:
+    Price_log: { min: 0, strict_min: true }
+    LivingArea_log: { min: 0 }
+    TotalArea_log: { min: 0 }
+    GrossArea_log: { min: 0 }
+    BuiltArea_log: { min: 0 }
+    LotSize_log: { min: 0 }
+    Parking: { min: 0 }
+    TotalRooms: { min: 0 }
+    NumberOfBedrooms: { min: 0 }
+    NumberOfBathrooms: { min: 0 }
+    NumberOfWC: { min: 0 }
+    ConstructionYear: { min: 1800, max: 2026 }
+    EnergyCertificate: { min: 0, max: 9 }
+    Garage: { min: 0, max: 1 }
+    Elevator: { min: 0, max: 1 }
+    ElectricCarsCharging: { min: 0, max: 1 }
+    HasParking: { min: 0, max: 1 }
+  valid_sets:
+    District:
+      - Aveiro
+      - Beja
+      - Braga
+      - Bragança
+      - Castelo Branco
+      - Coimbra
+      - Évora
+      - Faro
+      - Guarda
+      - Ilha da Madeira
+      - Ilha das Flores
+      - Ilha de Porto Santo
+      - Ilha de Santa Maria
+      - Ilha de São Jorge
+      - Ilha de São Miguel
+      - Ilha do Faial
+      - Ilha Terceira
+      - Leiria
+      - Lisboa
+      - Portalegre
+      - Porto
+      - Santarém
+      - Setúbal
+      - Viana do Castelo
+      - Vila Real
+      - Viseu
+    Type:
+      - Apartment
+      - Building
+      - Duplex
+      - Estate
+      - Farm
+      - Garage
+      - Hotel
+      - House
+      - Industrial
+      - Investment
+      - Land
+      - Manor
+      - Mansion
+      - Office
+      - Other - Commercial
+      - Other - Residential
+      - Storage
+      - Store
+      - Studio
+      - Transfer of lease
+      - Warehouse
+  critical_columns:
+    - Price_log
+    - District
+    - Type
+  hard_fail: false
+  traffic_light:
+    flag_path:      "data/08_reporting/CLEANED_OK.flag"
+    fail_flag_path: "data/08_reporting/CLEANED_FAIL.flag"

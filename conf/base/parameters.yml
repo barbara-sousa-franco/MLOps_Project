@@ -76,7 +76,7 @@ ingestion:
     target:      {name: house_target,      version: 1, description: "Target (Price)"}
   # Default FALSE so the pipeline is reproducible without a Hopsworks key (Docker, grader,
   # CI). Set true locally to demo the feature-store upload (requires HW_API_KEY + credentials).
-  to_feature_store: true
+  to_feature_store: false
   get_from_feature_store: false
 
 # --- data_drift --------------------------------------------------------------

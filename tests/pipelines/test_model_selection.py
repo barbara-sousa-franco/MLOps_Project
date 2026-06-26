@@ -1,17 +1,4 @@
 """Pytest tests for model_selection."""
-import pytest
-
-
-def test_returns_trained_model_and_valid_metric():
-    """model_selection returns a trained model and a valid metric.
-
-    TODO:
-      - run model_selection on the sample (few n_trials)
-      - assert the model has .predict and that RMSE/R² is finite and in the expected domain
-    """
-    pytest.skip("TODO: implement when model_selection is ready")
-
-"""Pytest tests for model_selection (trains models — marked slow)."""
 
 import numpy as np
 import pandas as pd
@@ -20,19 +7,17 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 
 
 @pytest.mark.slow
-def test_model_selection_returns_fitted_model():
-    from kedro_temp_mlops.pipelines.model_selection.nodes import model_selection
+def test_model_selection_returns_fitted_model_and_valid_metric():
+    from kedro_temp_mlops.pipelines.model_selection.nodes import model_selection, _evaluate
 
     rng = np.random.default_rng(42)
     X_train = pd.DataFrame(rng.random((60, 4)), columns=["f1", "f2", "f3", "f4"])
     X_val   = pd.DataFrame(rng.random((20, 4)), columns=["f1", "f2", "f3", "f4"])
-    y_train = pd.Series(rng.random(60) + 10)      # Price_log-like positive values
+    y_train = pd.Series(rng.random(60) + 10)
     y_val   = pd.Series(rng.random(20) + 10)
 
     parameters = {
-        "random_state": 42,
-        "n_trials": 3,                            # tiny — fast
-        "use_feature_selection": False,
+        "random_state": 42, "n_trials": 3, "use_feature_selection": False,
         "candidates": ["RandomForestRegressor", "GradientBoostingRegressor"],
         "search_spaces": {
             "RandomForestRegressor": {
@@ -48,11 +33,15 @@ def test_model_selection_returns_fitted_model():
 
     model = model_selection(X_train, X_val, y_train, y_val, parameters)
 
-    # returns a fitted regressor of one of the candidate types
+    # 1. returns a fitted model with .predict
     assert isinstance(model, (RandomForestRegressor, GradientBoostingRegressor))
-    # it's fitted -> can predict, and predict returns the right shape
     preds = model.predict(X_val)
     assert preds.shape == (20,)
+
+    # 2. the metric is finite and in a valid domain
+    metrics = _evaluate(model, X_val, y_val)
+    assert np.isfinite(metrics["rmse_log"]) and metrics["rmse_log"] >= 0
+    assert metrics["r2"] <= 1.0                      # R² can be negative on random data, but never > 1
 
 
 @pytest.mark.slow

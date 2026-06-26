@@ -1,20 +1,20 @@
-"""Smoke test: the pipeline runs end-to-end on the sample.
 
-Kedro pattern: create a KedroSession and run the pipeline on the sample, ensuring the
-node chaining and the catalog are consistent (does not validate model quality).
-"""
+"""Smoke test: data_prep runs end-to-end on the sample CSV (test env)."""
+
+from pathlib import Path
 
 import pytest
+from kedro.framework.session import KedroSession
+from kedro.framework.startup import bootstrap_project
 
 
-def test_pipeline_runs_end_to_end():
-    """The __default__ (or data_prep) pipeline runs without errors on the sample.
+@pytest.mark.slow
+def test_data_prep_runs_end_to_end():
+    """data_prep wires up and executes without errors on the sample."""
+    bootstrap_project(Path.cwd())
+    with KedroSession.create(env="test") as session:
+        output = session.run(pipeline_name="data_prep")
+    assert output is not None
 
-    TODO:
-      - point the catalog to tests/pipelines/sample/sample.csv (test env or override)
-      - bootstrap_project + KedroSession.create(...); session.run(pipeline_name="data_prep")
-      - assert the expected outputs exist
-    """
-    pytest.skip("TODO: implement smoke test once the nodes are ready")
 
 
