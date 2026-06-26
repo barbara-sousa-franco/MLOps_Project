@@ -32,7 +32,7 @@ tracking:
 
   disable_tracking:
     disable_autologging: True  # If True, we force autologging to be disabled. This is useful on databricks with autologging by default which conflicts with the plugin. If False, we keep the default behaviour which is disable by default anayway.
-    pipelines: ["training"]  # kedro-mlflow must not auto-manage runs for training — Prefect does it
+    pipelines: []
 
   experiment:
     # TODO (blueprint): experiment name for the house-price case
