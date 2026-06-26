@@ -15,59 +15,9 @@ import great_expectations as gx
 import hopsworks
 import pandas as pd
 
-from kedro.config import OmegaConfigLoader
-from kedro.framework.project import settings
-
-from kedro_temp_mlops.utils import build_expectation_suite, _build_between, to_feature_store, credentials
+from kedro_temp_mlops.utils import build_expectation_suite, to_feature_store, credentials
 logger = logging.getLogger(__name__)
 
-
-
-def to_feature_store(data, group_name, feature_group_version,
-                     description, group_description, credentials_input):
-    """Upload one feature group to Hopsworks. Data already validated upstream."""
-    project = hopsworks.login(
-        api_key_value=credentials_input["api_key"],
-        project=credentials_input["project"],
-    )
-    feature_store = project.get_feature_store()
-
-    fg = feature_store.get_or_create_feature_group(
-    name=group_name,
-    version=feature_group_version,
-    description=description,
-    primary_key=["index"],
-    online_enabled=False,
-    time_travel_format="NONE",      # <-- add this; no Delta dependency, no event_time needed
-    )
-
-    fg.insert(data, overwrite=False, write_options={"wait_for_job": True})
-
-    if group_description:
-        for desc in group_description:
-            fg.update_feature_description(desc["name"], desc["description"])
-
-    fg.compute_statistics()
-    logger.info("Feature group '%s' v%d: inserted %d rows.",
-                group_name, feature_group_version, len(data))
-    return fg
-
-
-def _split_feature_groups(df: pd.DataFrame, primary_key: str, target_col: str) -> dict:
-    """Split the dataset into 3 groups (numerical/categorical/target) with the primary key.
-
-    Used for the feature store upload (3 feature groups). Each group carries the primary key
-    to allow joins in read_from_feature_store.
-    """
-    target_df = df[[primary_key, target_col]]
-    feature_cols = [c for c in df.columns if c not in (primary_key, target_col)]
-    numeric_cols = df[feature_cols].select_dtypes(include="number").columns.tolist()
-    categorical_cols = [c for c in feature_cols if c not in numeric_cols]
-    return {
-        "numerical": df[[primary_key, *numeric_cols]],
-        "categorical": df[[primary_key, *categorical_cols]],
-        "target": target_df,
-    }
 
 
 def ingestion(df_raw: pd.DataFrame, parameters: Dict[str, Any],
@@ -132,7 +82,7 @@ def ingestion(df_raw: pd.DataFrame, parameters: Dict[str, Any],
         ]:
             logger.info("Uploading %s to Hopsworks...", name)
             to_feature_store(
-                data=data, group_name=name, feature_group_version=1,
+                data=data, group_name=name, feature_group_version=2,
                 description=desc, group_description=[],
                 credentials_input=creds,
             )
@@ -145,11 +95,11 @@ def ingestion(df_raw: pd.DataFrame, parameters: Dict[str, Any],
 # `split_reference_analysis` was removed from here to eliminate the duplication.
 
 
-def read_from_feature_store(parameters: dict, credentials: dict) -> pd.DataFrame:
+def read_from_feature_store(parameters: dict, credentials_input: dict) -> pd.DataFrame:
     """Read the 3 feature groups back and join on the primary key (write->read demo)."""
     project = hopsworks.login(
-        api_key_value=credentials["api_key"],
-        project=credentials["project"],
+        api_key_value=credentials_input["api_key"],
+        project=credentials_input["project"],
     )
     fs = project.get_feature_store()
 

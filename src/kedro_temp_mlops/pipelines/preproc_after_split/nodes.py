@@ -1,5 +1,5 @@
 """
-This is a boilerplate pipeline 'feature_engineering'
+This is a boilerplate pipeline 'preproc_after_split'
 generated using Kedro 1.3.1
 """
 """Post-split transforms, all fitted on the training split only:

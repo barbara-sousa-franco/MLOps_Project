@@ -27,6 +27,7 @@ dependencies = [
     # --- opcionais (descomentar conforme a escolha da equipa) ---
     # "nannyml>=0.12",             # alternativa/complemento ao evidently p/ drift
     # "pandera>=0.20",             # validação de schema (blueprint), além do Great Expectations
+    "deltalake>=1.6.1",
 ]
 # TODO: depois de mexer aqui, re-gerar o lock e o requirements.txt:
 #   uv lock && uv export --format requirements-txt -o requirements.txt
@@ -42,5 +43,13 @@ project_id = "90a3ff85835b4a218be60256690526c4"
 dev = [
     "black>=26.3.1",
     "pytest>=9.0.3",
+    "pytest-cov>=6.0",      # add this — needed for --cov in pytest config
     "ruff>=0.15.12",
 ]
+
+[tool.pytest.ini_options]
+addopts = """
+--cov-report term-missing \
+--cov src/kedro_temp_mlops -ra"""
+pythonpath = ["src"]
+

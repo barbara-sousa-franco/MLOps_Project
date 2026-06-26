@@ -1,4 +1,16 @@
-"""Shared Great Expectations helpers (used by ingestion + data_unit_tests)."""
+"""Shared helpers used across pipelines.
+
+Great Expectations:
+  - build_expectation_suite, _build_between, get_validation_results
+    (used by ingestion + data_unit_tests)
+
+Hopsworks Feature Store:
+  - to_feature_store, upload_cleaned_to_fs, upload_engineered_to_fs
+    (used by ingestion + preprocessing_train + feature_engineering)
+
+Also loads the module-level `credentials` from conf (resolved via OmegaConf /
+.env), shared by all feature-store helpers.
+""" 
 import pandas as pd
 import great_expectations as gx
 from great_expectations import expectations as gxe
@@ -94,7 +106,7 @@ def to_feature_store(data, group_name, feature_group_version,
         description=description,
         primary_key=["index"],
         online_enabled=False,
-        time_travel_format="NONE",
+        time_travel_format="HUDI",
     )
     fg.insert(data, overwrite=False, write_options={"wait_for_job": True})
 
@@ -116,7 +128,7 @@ def upload_cleaned_to_fs(cleaned_data, parameters):
     if "index" not in df.columns:
         df = df.reset_index(names="index")
     to_feature_store(
-        data=df, group_name="house_cleaned", feature_group_version=1,
+        data=df, group_name="house_cleaned", feature_group_version=2,
         description="Cleaned housing data (pre-split, statistics-free)",
         group_description=[], credentials_input=credentials["hopsworks"],
     )
@@ -130,7 +142,7 @@ def upload_engineered_to_fs(X_train_scaled, y_train_data, parameters):
     df = X_train_scaled.copy().reset_index(names="index")
     df["Price_log"] = y_train_data.values
     to_feature_store(
-        data=df, group_name="house_engineered_train", feature_group_version=1,
+        data=df, group_name="house_engineered_train", feature_group_version=2,
         description="Feature-engineered + scaled TRAIN data (fitted on train split)",
         group_description=[], credentials_input=credentials["hopsworks"],
     )
