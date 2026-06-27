@@ -15,6 +15,7 @@ dependencies = [
     "kedro>=1.3.1",
     "kedro-datasets>=4.0.0",       # TODO: necessário p/ pandas.CSVDataset/Pickle/JSON/Matplotlib no catalog
     "kedro-mlflow>=2.0.2",
+    "kedro-viz>=12.4.0",           # pipeline visualisation (report figure)
     "mlflow>=3.11.1",
     "optuna>=4.8.0",
     "prefect>=3.6.27",
