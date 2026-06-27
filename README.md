@@ -81,6 +81,12 @@ uv run prefect server start             # UI at http://127.0.0.1:4200
 uv run python kedro_prefect_flow.py     # run a flow once (flow_data_prep)
 uv run python deployment_prefect.py     # register + serve the cron deployments
 ```
+
+Check runs in Mlflow:
+``` bash
+uv run mlflow ui    # http://127.0.0.1:5000
+```
+
 Flows wrap the Kedro pipelines; `full_pipeline` chains them and **gates** the modelling on
 the data-quality traffic light (stops if any `*_FAIL.flag`). Deployments: nightly data
 tests, daily drift, weekly training, on-demand full pipeline.
