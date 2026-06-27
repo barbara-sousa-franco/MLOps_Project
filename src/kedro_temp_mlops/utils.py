@@ -108,6 +108,11 @@ def to_feature_store(data, group_name, feature_group_version,
         online_enabled=False,
         time_travel_format="HUDI",
     )
+    # Avro (Hopsworks insert) needs real nulls, not pandas NaN, for string columns.
+    data = data.copy()
+    for col in data.select_dtypes(include="object").columns:
+        data[col] = data[col].where(data[col].notna(), None)
+    
     fg.insert(data, overwrite=False, write_options={"wait_for_job": True})
 
     if group_description:
@@ -128,7 +133,7 @@ def upload_cleaned_to_fs(cleaned_data, parameters):
     if "index" not in df.columns:
         df = df.reset_index(names="index")
     to_feature_store(
-        data=df, group_name="house_cleaned", feature_group_version=2,
+        data=df, group_name="house_cleaned", feature_group_version=4,
         description="Cleaned housing data (pre-split, statistics-free)",
         group_description=[], credentials_input=credentials["hopsworks"],
     )
@@ -142,7 +147,7 @@ def upload_engineered_to_fs(X_train_scaled, y_train_data, parameters):
     df = X_train_scaled.copy().reset_index(names="index")
     df["Price_log"] = y_train_data.values
     to_feature_store(
-        data=df, group_name="cleaned_after_split", feature_group_version=2,
+        data=df, group_name="cleaned_after_split", feature_group_version=4,
         description="Feature-engineered + scaled TRAIN data (fitted on train split)",
         group_description=[], credentials_input=credentials["hopsworks"],
     )

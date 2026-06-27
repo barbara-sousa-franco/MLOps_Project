@@ -82,7 +82,7 @@ def ingestion(df_raw: pd.DataFrame, parameters: Dict[str, Any],
         ]:
             logger.info("Uploading %s to Hopsworks...", name)
             to_feature_store(
-                data=data, group_name=name, feature_group_version=2,
+                data=data, group_name=name, feature_group_version=4,
                 description=desc, group_description=[],
                 credentials_input=creds,
             )

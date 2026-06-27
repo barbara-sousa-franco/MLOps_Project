@@ -108,3 +108,13 @@ data_unit_tests_cleaned:
   traffic_light:
     flag_path:      "data/08_reporting/CLEANED_OK.flag"
     fail_flag_path: "data/08_reporting/CLEANED_FAIL.flag"
+
+
+ingestion: 
+  to_feature_store: false
+  get_from_feature_store: false
+
+data_unit_tests_model_input:
+  model_input_row_count:
+    min: 1
+    max: 1000
