@@ -34,8 +34,9 @@ Data and model assumptions and key design decisions.
   goes through the same cleaning + the train-fitted transformers (transform only).
 
 ## Model & evaluation
-- **Candidates:** RandomForest / GradientBoosting (XGBoost/LightGBM optional — they need
-  `libomp` on macOS, so they are imported lazily and disabled if absent).
+- **Candidates:** four models compared — RandomForest, GradientBoosting, **XGBoost** and
+  **LightGBM**. XGBoost/LightGBM need the `libomp` system library on macOS
+  (`brew install libomp`).
 - **Splits / leakage:** `learning_data` -> `split_train` -> `X_train` (fit) + `X_val` (the
   leak-free **validation** holdout used for tuning/selection). `test_data` is the honest
   **test** set. All fitted transformers (imputer, capper, target encoder, scaler) and the
@@ -43,9 +44,9 @@ Data and model assumptions and key design decisions.
 - **Selection:** challengers compared, then **Optuna** tuning on the validation holdout,
   minimising **RMSE**. Baseline = `DummyRegressor(strategy="mean")`.
 - **Champion/challenger** managed via the **MLflow Model Registry** (`house_price_model`).
-- **Result:** champion = GradientBoosting — **validation R² ≈ 0.72**, **honest test R² ≈ 0.68**
-  (on `test_data`). The EUR RMSE is inflated by heavy-tailed price outliers, so **R² and MAE**
-  are the headline metrics.
+- **Result:** champion = **RandomForest** (Optuna-tuned: `n_estimators=250`, `max_depth=22`) —
+  **validation R² ≈ 0.72**, **honest test R² ≈ 0.68** (on `test_data`). The EUR RMSE is inflated
+  by heavy-tailed price outliers, so **R² and MAE** are the headline metrics.
 - **Reporting:** the `reporting` pipeline only **aggregates** existing artifacts (champion,
   val/test metrics, GX traffic-light results, drift, SHAP) into a single Markdown file
   (`data/08_reporting/final_report.md`) — it trains/computes nothing new. The SHAP section is

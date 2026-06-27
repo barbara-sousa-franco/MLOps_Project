@@ -19,6 +19,9 @@ Optuna + SHAP + Great Expectations + Hopsworks (feature store) + evidently/nanny
 > recreates it locally from `uv.lock` with `uv sync`. This ensures everyone has exactly the
 > same versions.
 
+> ⚠️ **macOS:** XGBoost/LightGBM need the OpenMP runtime — run `brew install libomp` once,
+> otherwise `kedro run`/`kedro viz`/`pytest` fail to import the models.
+
 ```bash
 # 1. environment (uv) — create/update .venv from uv.lock
 uv sync
