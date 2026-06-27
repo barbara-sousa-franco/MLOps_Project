@@ -1,8 +1,3 @@
-"""
-This is a boilerplate pipeline 'feature_engineering'
-generated using Kedro 1.3.1
-"""
-
 """Pipeline `preproc_after_split` — post-split fit-on-train transforms (impute/cap/encode/scale)."""
 
 from kedro.pipeline import Pipeline, node, pipeline

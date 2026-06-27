@@ -1,16 +1,52 @@
 [
   {
     "event": "before_pipeline_run",
-    "timestamp": "2026-05-11T22:52:41.179631+00:00"
+    "timestamp": "2026-06-27T18:26:37.607751+00:00"
   },
   {
-    "event": "on_pipeline_error",
-    "error": "companies: Failed while loading data from dataset kedro_datasets.pandas.csv_dataset.CSVDataset(filepath=PurePosixPath('C:/Users/35191/Mestrado MDSAA-DS/MLOps/MLOps_Project/data/01_raw/companies.csv'), protocol='file', load_args={}, save_args={'index': False}).\n[Errno 2] No such file or directory: 'C:/Users/35191/Mestrado MDSAA-DS/MLOps/MLOps_Project/data/01_raw/companies.csv'",
-    "timestamp": "2026-05-11T22:52:43.087852+00:00",
-    "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\io\\core.py\", line 275, in load\n    return load_func(self)\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro_datasets\\pandas\\csv_dataset.py\", line 171, in load\n    return pd.read_csv(load_path, **self._load_args)\n           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 1026, in read_csv\n    return _read(filepath_or_buffer, kwds)\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 620, in _read\n    parser = TextFileReader(filepath_or_buffer, **kwds)\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 1620, in __init__\n    self._engine = self._make_engine(f, self.engine)\n                   ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\pandas\\io\\parsers\\readers.py\", line 1880, in _make_engine\n    self.handles = get_handle(\n                   ~~~~~~~~~~^\n        f,\n        ^^\n    ...<6 lines>...\n        storage_options=self.options.get(\"storage_options\", None),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\pandas\\io\\common.py\", line 873, in get_handle\n    handle = open(\n        handle,\n    ...<3 lines>...\n        newline=\"\",\n    )\nFileNotFoundError: [Errno 2] No such file or directory: 'C:/Users/35191/Mestrado MDSAA-DS/MLOps/MLOps_Project/data/01_raw/companies.csv'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\io\\data_catalog.py\", line 1061, in load\n    return dataset.load()\n           ~~~~~~~~~~~~^^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\io\\core.py\", line 282, in load\n    raise DatasetError(message) from exc\nkedro.io.core.DatasetError: Failed while loading data from dataset kedro_datasets.pandas.csv_dataset.CSVDataset(filepath=PurePosixPath('C:/Users/35191/Mestrado MDSAA-DS/MLOps/MLOps_Project/data/01_raw/companies.csv'), protocol='file', load_args={}, save_args={'index': False}).\n[Errno 2] No such file or directory: 'C:/Users/35191/Mestrado MDSAA-DS/MLOps/MLOps_Project/data/01_raw/companies.csv'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\framework\\session\\session.py\", line 432, in run\n    run_result = runner.run(\n        filtered_pipeline,\n    ...<3 lines>...\n        only_missing_outputs=only_missing_outputs,\n    )\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\runner\\runner.py\", line 115, in run\n    self._run(pipeline, catalog, hook_or_null_manager, run_id)  # type: ignore[arg-type]\n    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\runner\\sequential_runner.py\", line 63, in _run\n    super()._run(\n    ~~~~~~~~~~~~^\n        pipeline=pipeline,\n        ^^^^^^^^^^^^^^^^^^\n    ...<2 lines>...\n        run_id=run_id,\n        ^^^^^^^^^^^^^^\n    )\n    ^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\runner\\runner.py\", line 240, in _run\n    ).execute()\n      ~~~~~~~^^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\runner\\task.py\", line 88, in execute\n    node = self._run_node_sequential(\n        self.node,\n    ...<2 lines>...\n        self.run_id,\n    )\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\runner\\task.py\", line 152, in _run_node_sequential\n    inputs[name] = catalog.load(name)\n                   ~~~~~~~~~~~~^^^^^^\n  File \"C:\\Users\\35191\\Mestrado MDSAA-DS\\MLOps\\MLOps_Project\\.venv-mlops\\Lib\\site-packages\\kedro\\io\\data_catalog.py\", line 1063, in load\n    raise DatasetError(f\"{ds_name}: {e}\") from e\nkedro.io.core.DatasetError: companies: Failed while loading data from dataset kedro_datasets.pandas.csv_dataset.CSVDataset(filepath=PurePosixPath('C:/Users/35191/Mestrado MDSAA-DS/MLOps/MLOps_Project/data/01_raw/companies.csv'), protocol='file', load_args={}, save_args={'index': False}).\n[Errno 2] No such file or directory: 'C:/Users/35191/Mestrado MDSAA-DS/MLOps/MLOps_Project/data/01_raw/companies.csv'\n",
-    "dataset": "companies",
-    "operation": "loading",
-    "node": "create_confusion_matrix__11cf98fe",
-    "node_id": "d75ec4b0"
+    "event": "after_dataset_loaded",
+    "dataset": "production_model",
+    "node_id": "1aa02b26",
+    "status": "Available",
+    "size": 1039780299
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "X_val_scaled",
+    "node_id": "38eccaa6",
+    "status": "Available",
+    "size": 342857
+  },
+  {
+    "event": "after_dataset_loaded",
+    "dataset": "params:model_train",
+    "node_id": "578f7ebb",
+    "status": "Available",
+    "size": 0
+  },
+  {
+    "event": "after_node_run",
+    "node": "compute_shap_node",
+    "node_id": "39922c21",
+    "duration": 1364.1955623339745,
+    "status": "success"
+  },
+  {
+    "event": "after_dataset_saved",
+    "dataset": "shap_values",
+    "node_id": "b990bfdd",
+    "status": "Available",
+    "size": 60154
+  },
+  {
+    "event": "after_dataset_saved",
+    "dataset": "shap_importance",
+    "node_id": "04e02aa2",
+    "status": "Available",
+    "size": 511
+  },
+  {
+    "event": "after_pipeline_run",
+    "timestamp": "2026-06-27T18:49:48.137030+00:00"
   }
 ]

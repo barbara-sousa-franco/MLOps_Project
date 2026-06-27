@@ -1,7 +1,3 @@
-"""
-This is a boilerplate pipeline 'split_train_pipeline'
-generated using Kedro 1.3.1
-"""
 """Train/validation split of the cleaned (pre-transform) data. Runs BEFORE the
 fit-on-train transforms so those fit on the training split only.
 

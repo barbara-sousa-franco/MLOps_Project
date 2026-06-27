@@ -97,7 +97,7 @@ def full_pipeline():
     logger = get_run_logger()
 
     _clear_flags()
-    run_kedro_task("data_prep")  # includes data_unit_tests + writes traffic-light flags
+    run_kedro_task.submit("data_prep").result()  # includes data_unit_tests + writes traffic-light flags
 
     if not _traffic_light_is_green():
         logger.error("Traffic light is RED — data quality gate failed; stopping before training.")
@@ -105,12 +105,12 @@ def full_pipeline():
     logger.info("Traffic light is GREEN — proceeding to training.")
 
     # single pass: compare_models → feature_selection → tune_model → model_train
-    run_kedro_task("training")
+    run_kedro_task.submit("training").result()
 
-    run_kedro_task("inference")
-    run_kedro_task("monitoring")
-    run_kedro_task("explainability")
-    run_kedro_task("reporting")
+    run_kedro_task.submit("inference").result()
+    run_kedro_task.submit("monitoring").result()
+    run_kedro_task.submit("explainability").result()
+    run_kedro_task.submit("reporting").result()
 
     logger.info("Full pipeline finished.")
 

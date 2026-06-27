@@ -31,7 +31,7 @@ def register_pipelines() -> dict[str, Pipeline]:
         -> preproc_after_split (impute/cap/encode/scale) -> data_unit_tests
 
     Training flow (single pass):
-        compare_models → feature_selection (RFE) → tune_model (Optuna) → model_train → explainability
+        compare_models → tune_model (Optuna) → feature_selection (RFE) → model_train
     """
     p_ingestion = ingestion()
     p_split_data = split_data()
@@ -84,6 +84,5 @@ def register_pipelines() -> dict[str, Pipeline]:
         "training": training,
         "inference": inference,
         "monitoring": monitoring,
-        "reporting_flow": p_reporting,
         "__default__": data_prep + training + inference + monitoring + p_reporting,
     }

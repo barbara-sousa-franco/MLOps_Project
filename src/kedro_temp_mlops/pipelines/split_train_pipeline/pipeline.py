@@ -1,9 +1,4 @@
-"""
-This is a boilerplate pipeline 'split_train_pipeline'
-generated using Kedro 1.3.1
-"""
-
-"""Pipeline `split_train` — train/test split of cleaned data."""
+"""Pipeline `split_train` — train/validation split of cleaned data."""
 
 from kedro.pipeline import Pipeline, node, pipeline
 

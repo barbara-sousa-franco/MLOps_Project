@@ -1,13 +1,7 @@
 """Nodes for the `explainability` pipeline.
 
 Computes SHAP values on the final champion model and logs them as MLflow artifacts.
-Runs AFTER the final `training` run (with feature-selected columns).
-
-Workflow:
-  1. kedro run --pipeline training            (1st pass, all features)
-  2. kedro run --pipeline feature_selection   (RFE → best_columns)
-  3. kedro run --pipeline training            (2nd pass, best_columns)
-  4. kedro run --pipeline explainability      ← THIS PIPELINE
+Runs AFTER the `training` pipeline (compare_models → feature_selection → tune → train).
 """
 
 import logging
@@ -43,6 +37,12 @@ def compute_shap(
         logger.info("Restricted X_val to %d selected features for SHAP.", len(best_columns))
     except FileNotFoundError:
         logger.info("No best_cols.pkl — using all features for SHAP.")
+
+    # sample to keep SHAP computation tractable (TreeExplainer scales poorly with n_samples)
+    n_shap = parameters.get("n_shap_samples", 500)
+    if len(X_val) > n_shap:
+        X_val = X_val.sample(n=n_shap, random_state=42)
+        logger.info("Sampled %d rows from X_val for SHAP computation.", n_shap)
 
     explainer = shap.TreeExplainer(production_model)
     shap_values = explainer(X_val)

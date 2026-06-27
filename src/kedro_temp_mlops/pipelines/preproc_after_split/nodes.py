@@ -1,9 +1,5 @@
-"""
-This is a boilerplate pipeline 'preproc_after_split'
-generated using Kedro 1.3.1
-"""
 """Post-split transforms, all fitted on the training split only:
-impute -> cap -> target-encode.
+impute -> cap -> target-encode -> scale.
 """
 
 import logging

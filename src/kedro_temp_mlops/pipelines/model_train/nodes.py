@@ -3,21 +3,12 @@
 REGRESSION metrics (RMSE, MAE, R²), never accuracy. Always compare against a baseline
 (mean of Price) — the skill requires a baseline.
 
-=============================================================================
-WORKFLOW (two-pass):
-  Pass 1 — kedro run --pipeline training  (use_feature_selection: false)
-      model_selection + model_train on all features → champion saved
-  Pass 2 — kedro run --pipeline feature_selection
-      RFE on champion → best_columns saved to data/06_models/best_cols.pkl
-  Pass 3 — kedro run --pipeline training  (use_feature_selection: true)
-      model_selection + model_train on best_columns → final champion
-  Pass 4 — kedro run --pipeline explainability
-      SHAP on final champion → artifacts logged to MLflow
+Runs as part of the `training` composition:
+  model_selection (compare + tune) → feature_selection (RFE) → model_train
 
 SPLIT SEMANTICS:
   - X_train / X_val: from split_train (val is VALIDATION, not test)
-  - test_data: true out-of-sample, evaluated in Phase 3 only
-=============================================================================
+  - test_data: true out-of-sample, evaluated in inference only
 """
 
 import logging
@@ -34,8 +25,6 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 logger = logging.getLogger(__name__)
-
-_BEST_COLUMNS_PATH = os.path.join("data", "06_models", "best_cols.pkl")
 
 
 def _regression_metrics(y_true, y_pred) -> dict:

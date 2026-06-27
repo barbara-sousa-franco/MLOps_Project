@@ -6,7 +6,7 @@ from .nodes import compute_drift
 
 
 def create_pipeline(**kwargs) -> Pipeline:
-    """Cria a pipeline de drift. outputs: `drift_result`, `drift_report`."""
+    """Create the drift pipeline. outputs: `drift_result`, `drift_report`."""
     return pipeline(
         [
             node(

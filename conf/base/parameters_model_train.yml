@@ -13,4 +13,5 @@ model_train:
     model_name: house_price_model
   shap:
     top_n: 15
+  n_shap_samples: 200
   use_feature_selection: true
