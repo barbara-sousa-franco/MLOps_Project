@@ -113,15 +113,11 @@ def to_feature_store(data, group_name, feature_group_version,
     for col in data.select_dtypes(include="object").columns:
         data[col] = data[col].where(data[col].notna(), None)
     
-    fg.insert(data, overwrite=False, write_options={"wait_for_job": True})
+    fg.insert(data, overwrite=False, write_options={"wait_for_job": False, "compute_statistics":False})
 
     if group_description:
         for desc in group_description:
             fg.update_feature_description(desc["name"], desc["description"])
-
-    fg.compute_statistics()
-    logger.info("Feature group '%s' v%d: inserted %d rows.",
-                group_name, feature_group_version, len(data))
     return fg
 
 

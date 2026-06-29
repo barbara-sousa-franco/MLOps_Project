@@ -17,7 +17,7 @@ from kedro_temp_mlops.pipelines.model_predict import create_pipeline as model_pr
 from kedro_temp_mlops.pipelines.preprocessing_batch import create_pipeline as preprocessing_batch
 from kedro_temp_mlops.pipelines.model_selection import create_pipeline as model_selection
 from kedro_temp_mlops.pipelines.model_train import create_pipeline as model_train
-from kedro_temp_mlops.pipelines.preprocessing_train import create_pipeline as preprocessing
+from kedro_temp_mlops.pipelines.preprocessing_train import create_pipeline as preprocessing_train
 from kedro_temp_mlops.pipelines.reporting import create_pipeline as reporting
 from kedro_temp_mlops.pipelines.split_data import create_pipeline as split_data
 from kedro_temp_mlops.pipelines.split_train_pipeline import create_pipeline as split_train
@@ -35,7 +35,7 @@ def register_pipelines() -> dict[str, Pipeline]:
     """
     p_ingestion = ingestion()
     p_split_data = split_data()
-    p_preprocessing = preprocessing()
+    p_preprocessing_train = preprocessing_train()
     p_split_train = split_train()
     p_preproc_after_split = preproc_after_split()
     p_data_unit_tests = data_unit_tests()
@@ -52,7 +52,7 @@ def register_pipelines() -> dict[str, Pipeline]:
     data_prep = (
         p_ingestion
         + p_split_data
-        + p_preprocessing
+        + p_preprocessing_train
         + p_split_train
         + p_preproc_after_split
         + p_data_unit_tests
@@ -68,7 +68,7 @@ def register_pipelines() -> dict[str, Pipeline]:
         # individual pipelines (run in isolation)
         "ingestion": p_ingestion,
         "split_data": p_split_data,
-        "preprocessing": p_preprocessing,
+        "preprocessing_train": p_preprocessing_train,
         "split_train": p_split_train,
         "preproc_after_split": p_preproc_after_split,
         "data_unit_tests": p_data_unit_tests,
