@@ -106,7 +106,7 @@ def encode_categoricals(X_train, X_val, y_train, parameters):
     encoder = TargetEncoder(random_state=parameters['random_state'])
 
     X_train_enc, X_val_enc = X_train.copy(), X_val.copy()
-    X_train_enc[cols] = encoder.fit_transform(X_train[cols], y_train)
+    X_train_enc[cols] = encoder.fit_transform(X_train[cols], y_train.squeeze())
     X_val_enc[cols] = encoder.transform(X_val[cols])
 
     logger.info("Target-encoded %s", cols)

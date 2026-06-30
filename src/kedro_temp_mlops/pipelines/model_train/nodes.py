@@ -75,6 +75,7 @@ def model_train(
     else:
         candidate = RandomForestRegressor(**parameters["baseline_model_params"])
 
+    y_train = y_train.squeeze()
     candidate.fit(X_train, y_train)
 
     # --- baseline (mean predictor) ---
